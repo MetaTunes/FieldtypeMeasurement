@@ -1,0 +1,248 @@
+<?php namespace ProcessWire;
+
+/**
+ * ProcessWire Button Inputfield
+ * expected by FieldtypeMeasurement
+ *
+ * @author Mark Evens
+ * @license Licensed under GNU/GPL v3
+ * @link http://processwire.com/talk
+ * 
+ * ProcessWire 2.x, 3.x 
+ * Copyright (C) 2016 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://processwire.com
+ * @version 0.0.1
+ * @since 0.0.0 initial version
+ *
+ */
+
+class InputfieldMeasurement extends Inputfield {
+
+    public static function getModuleInfo() {
+        return array(
+            'title' => __('Inputfield Measurement', __FILE__),
+            'summary' => __('Edit a measurement in specified units.', __FILE__),
+            'version' => '0.0.1',
+            'author' => 'Mark Evens',
+            'requires' => array("FieldtypeMeasurement")
+        );
+    }
+
+    protected $field;
+
+    /**
+     * Construct the Inputfield, setting defaults for all properties
+     *
+     */
+    public function __construct() {
+        parent::__construct();
+        require_once(dirname(__FILE__) . '/Measurement.php');
+    }
+
+    /**
+     * Set the current Field
+     *
+     * @param Field $field
+     *
+     */
+    public function setField(Field $field) {
+        $this->field = $field; 
+    }
+
+    /**
+     * Per the Module interface, init() is called when the system is ready for API usage
+     *
+     */
+    public function init() {
+//    	bd($this, 'this in init');
+//    	bd(wire()->input->id, 'page in init');
+//    	$id = wire()->input->id;
+//		$this->addHookAfter("Page(id=$id)::changed", $this, 'afterChanged');
+		parent::init();
+	}
+
+	protected function afterChanged(HookEvent $event) {
+    	bd('in after changed hook');
+		$p = $event->object;
+		$p->of(false);
+		$change = $event->arguments(0);
+		$changeField = $p->$change;
+		bd($changeField, '$changeField');
+		if(is_object($changeField) and get_class($changeField) == 'ProcessWire\Measurement') {
+			$old = $event->arguments(1); // old value
+			$new = $event->arguments(2); // new value
+			bd(['old' => $old, 'new' => $new], 'changes to field');
+			if($old->get('magnitude') == $new->get('magnitude') and $old->get('unit') != $new->get('unit')) {
+				bd(['old unit' => $old->get('unit'), 'new unit' => $new->get('unit')], 'change of unit');
+				$changeField->set('unit', $old->get('unit'));
+				$changeField->convertTo($new->get('unit'));
+			}
+		}
+
+
+//					$event->replace = true;
+//					$event->return;
+	}
+
+    /**
+     * Return the completed output of this Inputfield, ready for insertion in an XHTML form
+     *
+     * @return string
+     *
+     */
+    public function ___render() {
+
+		$name = $this->attr('name');
+		$field = $this->field;
+//        $fieldSettingsPath = wire('config')->urls->admin."setup/field/edit?id=$field->id#fieldtypeConfig";
+		bd($this->attr('value'), 'value 0');
+		if($this->attr('value')) $value = $this->attr('value'); // Measurement object
+		else {
+			$value = new Measurement();
+		}
+		bd($value->get('quantity'), 'quantity');
+		bd($value->get('units'), 'units');
+		bd($value->get('unit'), 'unit');
+		$inputfields = new InputfieldFieldset();
+		$numberOfCols = 2;
+		if(!$field->hide_quantity) $numberOfCols ++;
+		if($field->show_update) $numberOfCols ++;
+		$colWidth = 100 / $numberOfCols;
+
+		// quantity
+		if (!$field->hide_quantity) {
+			$f = $this->modules->get("InputfieldText");
+			$f->label = $this->_("Quantity");
+			$f->attr('name', "{$name}_quantity");
+			$f->attr('value', $value->get('quantity'));
+			$f->collapsed = Inputfield::collapsedNoLocked;
+			$f->columnWidth = $colWidth;
+			$inputfields->add($f);
+		}
+
+        // magnitude
+        $f = $this->modules->get("InputfieldText");
+        $f->label = $this->_("Magnitude");
+        $f->attr('name', "{$name}_magnitude");
+        $f->attr('value', implode('|', $value->get('magnitude')));  // magnitude is an array
+		$f->notes = __("Enter a number or (for combi units) a set of numbers separated by a 'pipe' | - e.g 2|3.4");
+        $f->columnWidth = $colWidth;
+        $inputfields->add($f);
+
+		// unit
+		$f = $this->modules->get("InputfieldSelect");
+		$f->label = $this->_("Unit");
+		$f->attr('name', "{$name}_unit");
+		$f->attr('value', $value->get('unit'));
+		bd($value, 'value');
+		$units = FieldtypeMeasurement::getUnits($value->get('quantity'));
+		foreach($value->get('units') as $unit) {
+			$shortLabel = $units[$unit]['shortLabel'];
+			$f->addOption($unit, "$unit ($shortLabel)");
+		}
+//		$f->options = $value->units;
+		$f->columnWidth = $colWidth;
+		$inputfields->add($f);
+
+		//update box
+		if ($field->show_update) {
+			$f = $this->modules->get('InputfieldCheckbox');
+			$f->attr('name', "{$name}_update");
+			$f->label = __('Convert magnitude (on save) if unit changed');
+			$f->notes = __("If checked, the magnitude will automatically be converted on saving the page if the units have changed. It is reset to unchecked on each save/refresh.");
+			$f->attr('checked', '');
+			$f->columnWidth = $colWidth;
+			$inputfields->append($f);
+		}
+
+        return $inputfields->render();
+    }
+
+
+    /**
+     * This Inputfield is defined empty, if the magnitude field is not populated
+     *
+     * Used by the 'required' check to see if the field is populated.
+     * Overwrites parent function Inputfield::isEmpty()
+     *
+     * @return bool
+     *
+     */
+    public function isEmpty() {
+        $value = $this->attr('value');
+        if (is_object($value) && !strlen("{$value->magnitude}")) return true;
+        return false; 
+    }
+
+    /**
+     * Process the input from the given WireInputData (usually $input->get or $input->post), load and clean the value for use in this Inputfield.
+     *
+     * @param WireInputData $input
+     * @return $this
+     *
+     */
+	public function ___processInput(WireInputData $input) {
+		$name = $this->attr('name');
+		$value = $this->attr('value');
+		$old = clone $value; // Don't want $old to change when $value is altered
+		//bd($value, 'value at start of process input');
+		// $value->targetSanitized = null;
+
+		$input_names = array(
+			'magnitude' => "{$name}_magnitude",
+			'unit' => "{$name}_unit",
+			'quantity' => "{$name}_quantity",
+			'update' => "{$name}_update"
+		);
+
+		// loop inputs and set them if changed
+        foreach($input_names as $key => $name) {
+        	bd(['input name' => $input->$name, 'value->key' => $value->key], 'input name etc');
+            if(isset($input->$name) && $value->$key != $input->$name) {
+            	if($key == 'magnitude') {
+					$input->$name = trim($input->$name);
+            		if(!is_numeric($input->$name)) {
+						$magnitude = explode('|', $input->$name);
+						$magnitude = array_filter($magnitude, 'is_numeric');
+						$value->set($key, $magnitude);
+					} else {
+						$value->set($key, [$input->$name]);
+					}
+				} else {
+					$value->set($key, $input->$name);
+				}
+                $this->trackChange('value');
+            }
+        }
+
+        $new = $value;
+		//bd(['old' => $old, 'new' => $new], 'changes to field');
+		$oldUnit = $old->get('unit');
+		$newUnit = $new->get('unit');
+
+		bd($value->get('magnitude'), 'Magnitude');
+		bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
+		bd($value->get('update'), 'update?');
+		if($oldUnit and $newUnit and  $oldUnit != $newUnit and $value->get('update') == 1) {
+			bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
+			// Check consistency of units and magnitude
+			if(count($value->get('magnitude')) != count((explode('|', $oldUnit)))) {
+				throw new ConvertorException("Magnitude not consistent with original unit");
+			}
+			$value->set('unit', $oldUnit);
+			$value->convertTo($newUnit);
+		} else {
+			bd('No change');
+			// Check consistency of units and magnitude
+			if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
+				throw new ConvertorException("Magnitude not consistent with chosen unit");
+			}
+		}
+		bd($value, 'value at end of process_input');
+		bd($this, 'this at end of process_input');
+        return $this;
+    }
+
+}

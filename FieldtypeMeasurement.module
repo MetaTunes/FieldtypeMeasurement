@@ -1,0 +1,324 @@
+<?php namespace ProcessWire;
+
+/**
+ * ProcessWire Measurement Fieldtype
+ *
+ * Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and value (in the specified units).
+ * Define quantity and unit options field settings.
+ *
+ * @author Mark Evens
+ * @license Licensed under GNU/GPL v3
+ * @link http://processwire.com/talk
+ *
+ * ProcessWire 2.x, 3.x
+ * Copyright (C) 2016 by Ryan Cramer
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ *
+ * http://processwire.com
+ * @version 0.0.1
+ * @since 0.0.0 initial version
+ *
+ *
+ *  * MODULE CONFIGURATION PROPERTIES
+ * ===============================
+ * @property string $quantity The physical quantity to be measured
+ * @property string $units The units to be presented as options
+ *
+ */
+class FieldtypeMeasurement extends Fieldtype {
+
+	/**
+	 * Construct the Fieldtype and populate default settings and column types
+	 *
+	 */
+	public function __construct() {
+		parent::__construct();
+		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/Measurement.php');
+	}
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => __('Measurement', __FILE__), // Module Title
+			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
+			'version' => '0.0.1',
+            'author' => 'Mark Evens',
+			'requires' => ['ProcessWire>=3.0.148'],
+            'installs' => 'InputfieldMeasurement',
+        );
+    }
+
+	/**
+	 * Initialize this Fieldtype
+	 *
+	 */
+	public function init() {
+		parent::init();
+	}
+
+	/**
+	 * Format value for output
+	 *
+	 * @see Measurement.php
+	 */
+	public function ___formatValue(Page $page, Field $field, $value) {
+		if(!$value instanceof Measurement) return null;
+		return $value->render();
+	}
+
+	/**
+	 * Return the Inputfield for this fieldtype
+	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @return Inputfield
+	 *
+	 */
+	public function getInputfield(Page $page, Field $field) {
+		$inputfield = $this->wire('modules')->get('InputfieldMeasurement');
+		$inputfield->setField($field);
+		return $inputfield;
+	}
+
+	/**
+	 * nothing compatible
+	 *
+	 */
+	public function ___getCompatibleFieldtypes(Field $field) {
+		//return null;
+		$fieldtypes = $this->wire(new Fieldtypes());
+		foreach($this->wire('fieldtypes') as $fieldtype) {
+			if($fieldtype instanceof FieldtypeButton) {
+				$fieldtypes->add($fieldtype);
+			}
+		}
+		return $fieldtypes;
+	}
+
+	/**
+	 * Given a raw value (value as stored in DB), return the value as it would appear in a Page object
+	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @param string|int|array $value
+	 * @return string|int|array|object $value
+	 *
+	 */
+	public function ___wakeupValue(Page $page, Field $field, $value) {
+
+		// if for some reason we already get a valid value, then just return it
+		if($value instanceof Measurement) return $value;
+		bd($value, 'wakeup value');
+		// start a blank value to be populated
+		$measurement = $this->getBlankValue($page, $field);
+
+		// if we were given a blank value, then we've got nothing to do: just return a blank Measurement object
+		if(empty($value) || !is_array($value)) return $measurement;
+
+		// create new Measurement object
+		bd($measurement, 'measurement0 in ___wakeupValue');
+		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
+		bd($measurement, 'measurement1 in ___wakeupValue');
+		$measurement->unit = $value['unit']; // canonical unit name
+		$measurement->quantity = $value['quantity']; // quantity measured by this unit - must match name of php file containing unit definitions and conversions
+		// get the current shortLabel and plural from the config file - not a saved version
+		if($value['unit'] and $value['quantity']) {
+			$units = FieldtypeMeasurement::getUnits($measurement->quantity);
+			if(isset($units[$measurement->unit]['shortLabel'])) {
+				$measurement->shortLabel = $units[$measurement->unit]['shortLabel'];
+			}
+			if(isset($units[$measurement->unit]['plural'])) {
+				$measurement->plural = $units[$measurement->unit]['plural'];
+			}
+		}
+		// $measurement->resetTrackChanges();
+		bd($measurement, 'measurement2 in ___wakeupValue');
+		return $measurement;
+	}
+
+	/**
+	 * Return a blank ready-to-populate version of a field of this type
+	 *
+	 * @return object
+	 *
+	 */
+	public function getBlankValue(Page $page, Field $field) {
+		if(!$field->magnitude) $field->magnitude = [];
+		$measurement = new Measurement($field->quantity, $field->unit, $field->magnitude);
+		bd($measurement, 'new measurement in getBlankValue');
+		bd($field, 'field in getBlankValue');
+		bd($field->quantity, 'quantity in getBlankValue');
+		if ($field->quantity) $measurement->set('quantity', $field->quantity);
+		if ($field->units) $measurement->set('units', $field->units);
+		if ($field->magnitude) $measurement->set('magnitude', $field->magnitude);
+		if ($field->shortLabel) $measurement->set('shortLabel', $field->shortLabel);
+		$measurement->setTrackChanges(true);
+		bd($measurement, 'measurement returned from getBlankValue');
+		return $measurement;
+	}
+
+	/**
+	 * Given an 'awake' value, as set by wakeupValue, convert the value back to a basic type for storage in DB.
+	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @param Button object $value
+	 * @return array
+	 *
+	 */
+	public function ___sleepValue(Page $page, Field $field, $value) {
+
+		$sleepValue = array();
+bd($value, 'value in sleep');
+		// if we are given something other than a Measurement object,
+		// then just return a blank array
+		if(!$value instanceof Measurement) return $sleepValue;
+
+		if(!is_array($value->get('magnitude'))) $value->set('magnitude', [$value->get('magnitude')]);
+		$sleepValue = array(
+			'data' => implode('|', $value->get('magnitude')),
+			'unit' => $value->get('unit'),
+			'quantity' => $value->get('quantity')
+		);
+bd($sleepValue, 'sleepValue');
+		return $sleepValue;
+	}
+
+	/**
+	 * Given a value, make it clean for storage within a Page
+	 *
+	 */
+	public function sanitizeValue(Page $page, Field $field, $value) {
+
+		// if given a blank value, return a valid blank value
+		if(empty($value)) return $this->getBlankValue($page, $field, $value);
+
+		// if given something other than a Measurement object, throw an error
+		if(!$value instanceof Measurement) {
+			throw new WireException("Value set to field '$field->name' must be a Measurement object");
+		}
+
+		// note that sanitization of individual fields within a given event is already
+		// performed by the Measurement::set() method, so we don't need to do anything else here.
+
+		return $value;
+	}
+
+	/**
+	 * Return the database schema that defines a Measurement
+	 *
+	 */
+	public function getDatabaseSchema(Field $field) {
+
+		$schema = parent::getDatabaseSchema($field);
+
+		$schema['data'] = 'varchar(64) NOT NULL'; // not used
+		$schema['unit'] = 'text NOT NULL';
+		$schema['quantity'] = 'text NOT NULL';
+
+
+		return $schema;
+	}
+
+	/**
+	 * Method called when the field is database-queried from a selector
+	 *
+	 */
+	public function getMatchQuery($query, $table, $subfield, $operator, $value) {
+		// If searching 'magnitude' then assume our default (data) field
+		if($subfield == 'magnitude') $subfield = 'data';
+		return parent::getMatchQuery($query, $table, $subfield, $operator, $value);
+	}
+
+	/**
+	 * Get any inputfields used for configuration of this Fieldtype.
+	 *
+	 * This is in addition any configuration fields supplied by the parent Inputfield.
+	 *
+	 * @param Field $field
+	 * @return InputfieldWrapper
+	 *
+	 */
+	public function ___getConfigInputfields(Field $field) {
+
+		$inputfields = parent::___getConfigInputfields($field);
+
+		$f = $this->modules->get("InputfieldSelect");
+		$quantities = $this->getQuantities();
+		$f->label = __("Quantity");
+		$f_name = 'quantity';
+		$f->name = $f_name;
+		$f->columnWidth = 50;
+		$f->description = __("Type of physical quantity to be measured.");
+		$f->notes = __("Save after changing to see the options for units applicable to this quantity.");
+		foreach($quantities as $quantity) {
+			$f->addOption($quantity);
+		}
+		$f->value = $field->get('quantity');
+		$inputfields->append($f);
+
+		$f = $this->modules->get('InputfieldCheckbox');
+		$f->attr('name', 'hide_quantity');
+		$f->label = __('Hide quantity display in the input field.');
+		$f->attr('checked', $field->hide_quantity ? 'checked' : '' );
+		$f->columnWidth = 50;
+		$inputfields->append($f);
+
+		$f = $this->modules->get('InputfieldAsmSelect');
+		$f_name = 'units';
+		$f->name = $f_name;
+		$f->label = __('Select the units you want to appear as options for this field.');
+		$f->columnWidth = 50;
+		$quantity = $field->get('quantity');
+		$units = ($quantity) ? self::getUnits($quantity) : [];
+		foreach($units as $key => $unit) {
+			$shortLabel = $unit['shortLabel'];
+			$f->addOption($key, "$key ($shortLabel)");
+		}
+		$f->value = $field->get('units');
+		$inputfields->append($f);
+
+		$f = $this->modules->get('InputfieldCheckbox');
+		$f->attr('name', 'show_update');
+		$f->label = __('Show an update checkbox');
+		$f->notes = __("If the update box in the input field is checked, any changes to the units will automatically convert the magnitude.");
+		$f->attr('checked', $field->show_update ? 'checked' : '' );
+		$f->columnWidth = 50;
+		$inputfields->append($f);
+
+		return $inputfields;
+	}
+
+	public function getQuantities() {
+		$configPath =  __DIR__ . '/Config/';
+		$configFiles = $this->wire()->files->find($configPath);
+		$userPath =  wire()->config->paths->templates . 'Measurement/';
+		$userFiles = $this->wire()->files->find($userPath);
+		$allFiles = array_merge($configFiles, $userFiles);
+		$quantities = [];
+		foreach($allFiles as $file) {
+			$quantities[] = basename($file, '.php');
+		}
+		return array_unique($quantities);
+	}
+
+	public static function getUnits($quantity) {
+		bd(debug_backtrace(), 'getUnits' . $quantity);
+		$unitsFile = self::configFile($quantity);
+		if(!file_exists($unitsFile)) return;
+		$conversions = include $unitsFile;
+		$units = $conversions['units'];
+		return $units;
+	}
+
+	public static function configFile($quantity) {
+		$configFile = __DIR__ . '/Config/' . $quantity . '.php';
+		$userFile = wire()->config->paths->templates . 'Measurement/' . $quantity . '.php';
+		if(file_exists($userFile)) {
+			$unitsFile = $userFile;
+		} else {
+			$unitsFile = $configFile;
+		}
+		return $unitsFile;
+	}
+
+}
