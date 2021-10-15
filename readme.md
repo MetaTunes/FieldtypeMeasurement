@@ -6,7 +6,7 @@ The API permits various conversions and formatting.
 ## Set up
 The various units of measurement are defined in the module FieldtypeMeasurement/Config directory. 
 There is a separate file for each type of quantity - e.g. "Length", "Area". 
-Each file contains an array defining the applicable units of measure for this quantity, in the format (for example in "Length.php"):
+Each file contains an array defining the applicable units of measure for this quantity, in the following format (for example in "Length.php"):
  ````
 ["base" => "metre",
 	"units" => [
@@ -23,7 +23,7 @@ On the details tab of the field setup page, you define the quantity to be measur
 * to show an 'update box' - if this is shown and checked before saving the page then, if the units have been changed, the magnitude of the measurement will be converted into the new units (see below).
 
 ## Usage on a page
-Having added the field to a template, the page then displays a fieldset with:
+Having added the field to a template, related pages then display a fieldset with:
 * quantity (not editable here) unless it was set as hidden;
 * magnitude;
 * unit (dropdown);
@@ -36,7 +36,7 @@ If the update box is checked and the units have been changed then the magnitude 
 When rendering the page, the normal formatted value will be the measurement value followed by the abbreviation ('shortLabel' in the config file). This format can be changed (see API section).
 
 ### Combination units
-Some units are "combinations" - in other words, two or more units combined - e.g. feet and inches. These are defined using the pipe "|" join. When entering a value, it is necessary to enter the required number of values joined with a "|". Thus, for 2 feet 3 inches, enter "2|3" where the selected unit is "foot|inch". If the magnitude is inconsistent with the chosen units an error will be thrown. If "update" is selected then the magnitude needs to be consistent with the previous unit chosen - conversion to the correct format for the new unit is automatic.
+Some units are "combinations" - in other words, two or more units combined - e.g. feet and inches. These are defined using the pipe "|" join. When entering a value, it is necessary to enter the required number of values joined with a "|". Thus, for 2 feet 3 inches, enter "2|3" where the selected unit is "foot|inch". If the format of the magnitude is inconsistent with the chosen units an error will be thrown. If "update" is selected then the magnitude needs to be consistent with the previous unit chosen - conversion to the correct format for the new unit is automatic.
 
 When rendering the page, the normal formatted value will be the first measurement value followed by the first abbreviation ('shortLabel' in the config file), then the second (after a space) etc. This format can be changed (see API section).
 
@@ -48,21 +48,25 @@ $pages->find("template=my_template, temperature.unit=Celsius, temperature.magnit
 Note that no on-the-fly conversions are carried out here, so if you are using a mix of units, you may need to include them all (with 'or' conjunction).
 
 ## API
-To use the API you need the **unformatted** field - i.e. either directly from $page->getUnformatted('my_measurement_field') or by setting $page->of(false).
+To use the API you need the **unformatted** field - i.e. either directly from 
+````
+$page->getUnformatted('my_measurement_field');
+````
+or by setting $page->of(false).
 This is an object of class "Measurement" (which extends WireData).
 The following methods are available for Measurement objects:
 * *format(?array $options = [])*: Change the formatting used in subsequent rendering.
 The default options are:
     ````
-            $defaultOptions = [
-                'label' => 'short',
-                'decimals' => 2,
-                'round' => true,
-                'join' => [' '],
-                'skipNil' => true
-            ];
+    $defaultOptions = [
+        'label' => 'short',
+        'decimals' => 2,
+        'round' => true,
+        'join' => [' '],
+        'skipNil' => true
+    ];
     ````
-   'label =>''short' provides the abbreviations, for the long names (pluralised where appropriate), use 'long'. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
+   'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
    'join' and 'skipNil' are only relevant for combination units - see below (note that 'join' is an array).
 
     For plurals which are not achieved by adding an 's', the plural is given in the config file.
@@ -79,9 +83,9 @@ Rounds (or truncates) the value to the specified number of decimal places (if gi
 * *valueAsAll(?int $decimals = null, ?bool $round = true)*: Returns an array of all conversion values for compatible units.
 * *valueAsSelectable(?int $decimals = null, ?bool $round = true)*: Returns an array of all conversion values for selectable units.
 * *valueAsMany(array $units, ?int $decimals = null, ?bool $round = true)*: Returns an array of all conversion values for units in the specified array.
-* *convertFrom($value, ?string $unit = null])*: Sets the magnitude to the value, converting from the specified compatible unit (if given) to the current unit of the measurement object.
+* *convertFrom($value, ?string $unit = null])*: Sets the magnitude to the value, converting from the specified compatible unit (if given) to the current unit of the measurement object. This method updates the current object.
 * *convertTo(string $unit, ?int $decimals = null, ?bool $round = true)*: Converts the object to one with the specified unit, carrying out the relevant conversion of the magnitude.
-Note that if the specified unit is not in the selectable options list, then blank will be displayed as an option; changing the field setup details to include the relevant option will cause it to display.
+Note that if the specified unit is not in the selectable options list, then blank will be displayed as an option; changing the field setup details to include the relevant option will cause it to display. This method updates the current object.
 * *add(Measurement $measurement2, ?string $unit = null)*: Add measurement2 to this measurement. The result is a new measurement object with the magnitude equal to the sum; the unit will be as specified by $unit, if present, otherwise it will be the unit of this measurement.
 * *subtract(Measurement $measurement2, ?string $unit = null)*: Subtract measurement2 from this measurement. The result is a new measurement object with the magnitude equal to the difference; the unit will be as specified by $unit, if present, otherwise it will be the unit of this measurement.
 * *getUnits(?string $unit = null)*: Get all the compatible units for $unit. If $unit is null, this is all the compatible units for the current unit of the measurement object.
