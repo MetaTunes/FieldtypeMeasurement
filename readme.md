@@ -3,6 +3,8 @@ This fieldtype allows a measurement unit to be stored with a corresponding measu
 The relevant details of the type of measurement are set on the Details tab of the field setup. 
 The API permits various conversions and formatting.
 
+**Please note that this module is 'proof of concept' at the moment - there are limited units available and quite a lot of code tidying to do. More units will be added shortly.**
+
 ## Set up
 The various units of measurement are defined in the module FieldtypeMeasurement/Config directory. 
 There is a separate file for each type of quantity - e.g. "Length", "Area". 
@@ -58,15 +60,16 @@ The following methods are available for Measurement objects:
 * *format(?array $options = [])*: Change the formatting used in subsequent rendering.
 The default options are:
     ````
-    $defaultOptions = [
-        'label' => 'short',
-        'decimals' => 2,
-        'round' => true,
-        'join' => [' '],
-        'skipNil' => true
-    ];
+		$defaultOptions = [
+			'label' => 'short', // 'short', 'shortPadded' (with space to separate from magnitude), 'long', 'none'
+			'position' => 'append', // 'append' - after the magnitude, 'prepend' - before the magnitude (only applies to shortLabels.
+			'decimals' => 2,
+			'round' => true, // otherwise value will be truncated
+			'join' => [' '], // an array for joining characters for combi units (one less element than the number of units in the combi) - e.g. [' and ']
+			'skipNil' => true
+		];
     ````
-   'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
+   'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. 'position' determines the location of the shortLabel (before or after the mangnitude). Long names will alwasy be after the magnitude and preceded by a space. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
    'join' and 'skipNil' are only relevant for combination units - see below (note that 'join' is an array).
 
     For plurals which are not achieved by adding an 's', the plural is given in the config file.

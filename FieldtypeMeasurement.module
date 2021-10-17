@@ -15,7 +15,8 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  *
  * http://processwire.com
- * @version 0.0.1
+ * @version 0.0.2
+ * @since 0.0.1 minor mods
  * @since 0.0.0 initial version
  *
  *
@@ -40,7 +41,7 @@ class FieldtypeMeasurement extends Fieldtype {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.1',
+			'version' => '0.0.2',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
@@ -142,15 +143,15 @@ class FieldtypeMeasurement extends Fieldtype {
 	 *
 	 */
 	public function getBlankValue(Page $page, Field $field) {
-		if(!$field->magnitude) $field->magnitude = [];
-		$measurement = new Measurement($field->quantity, $field->unit, $field->magnitude);
+		$measurement = new Measurement($field->quantity, null, []);
 		bd($measurement, 'new measurement in getBlankValue');
 		bd($field, 'field in getBlankValue');
 		bd($field->quantity, 'quantity in getBlankValue');
 		if ($field->quantity) $measurement->set('quantity', $field->quantity);
 		if ($field->units) $measurement->set('units', $field->units);
-		if ($field->magnitude) $measurement->set('magnitude', $field->magnitude);
-		if ($field->shortLabel) $measurement->set('shortLabel', $field->shortLabel);
+		$measurement->set('magnitude', []);
+		$measurement->set('shortLabel', null);
+		$measurement->set('plural', null);
 		$measurement->setTrackChanges(true);
 		bd($measurement, 'measurement returned from getBlankValue');
 		return $measurement;
@@ -211,7 +212,7 @@ bd($sleepValue, 'sleepValue');
 
 		$schema = parent::getDatabaseSchema($field);
 
-		$schema['data'] = 'varchar(64) NOT NULL'; // not used
+		$schema['data'] = 'varchar(64) NOT NULL';
 		$schema['unit'] = 'text NOT NULL';
 		$schema['quantity'] = 'text NOT NULL';
 

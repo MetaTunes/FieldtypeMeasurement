@@ -13,7 +13,8 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
- * @version 0.0.1
+ * @version 0.0.2
+ * @since 0.0.1 additional formatting options
  * @since 0.0.0 initial version
  *
  */
@@ -24,7 +25,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.1',
+            'version' => '0.0.2',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement")
         );
@@ -245,4 +246,11 @@ class InputfieldMeasurement extends Inputfield {
         return $this;
     }
 
+	public function ___getConfigInputfields() {
+		$inputfields = parent::___getConfigInputfields();
+
+// No separate input settings at the moment - all in the details tab
+		return $inputfields;
+
+	}
 }

@@ -299,8 +299,12 @@ bd($result, 'result');
     }
 
 	public function render(?array $options = []) {
-    	if(!$options) $options = ($this->format) ?: $this->formatOptions();
-
+    	if(!$options) {
+			$options = ($this->format) ?: $this->formatOptions();
+		} else {
+    		$options = $this->formatOptions($options);
+		}
+		bd($options, 'options in render');
 		$magnitudes = (is_array($this->magnitude)) ? $this->magnitude : [$this->magnitude];
 		$units = explode('|', $this->unit);
 		$labels = explode('|', $this->shortLabel);
@@ -325,16 +329,27 @@ bd($result, 'result');
 				case 'none' :
 					$label = '';
 					break;
+				case 'shortPadded' :
+					if($options['position'] == 'prepend') {
+						$label = $shortLabel . ' ';
+					} else {
+						$label = ' ' . $shortLabel;
+					}
+					break;
 				case 'short' :
 				default :
-					$label = ' ' . $shortLabel;
+					$label =  $shortLabel;
 					break;
 			}
 			if($options['decimals'] !== null) {
 				$magnitude = ($options['round']) ? round($magnitude, $options['decimals']) : intval($magnitude);
 			}
 			$join = ($index < $count - 1) ? $join : '';
-			$out .= ($magnitude == 0 && $index < $count -1 && $options['skipNil']) ? '' : $magnitude . $label . $join;
+			if($options['position'] == 'prepend') {
+				$out .= ($magnitude == 0 && $index < $count - 1 && $options['skipNil']) ? '' : $label . $magnitude . $join;
+			} else {
+				$out .= ($magnitude == 0 && $index < $count - 1 && $options['skipNil']) ? '' : $magnitude . $label . $join;
+			}
 		}
 		return $out;
 	}
@@ -346,15 +361,17 @@ bd($result, 'result');
 
 	protected function formatOptions($options = []) {
 		$defaultOptions = [
-			'label' => 'short',
+			'label' => 'short', // 'short', 'shortPadded' (with space to separate from magnitude), 'long', 'none'
+			'position' => 'append', // 'append' - after the magnitude, 'prepend' - before the magnitude (only applies to shortLabels.
 			'decimals' => 2,
-			'round' => true,
-			'join' => [' '],
+			'round' => true, // otherwise value will be truncated
+			'join' => [' '], // an array for joining characters for combi units (one less element than the number of units in the combi) - e.g. [' and ']
 			'skipNil' => true
 		];
 		foreach($options as $key => $option) {
 			$defaultOptions[$key] = $option;
 		}
+		bd($defaultOptions, 'defaultoptions');
 		return $defaultOptions;
 	}
 }
