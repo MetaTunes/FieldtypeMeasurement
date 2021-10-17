@@ -15,8 +15,8 @@ final class ConversionRepository
 //        	$definition['base'] = $base;
             $this->definitions[$definition->getUnit()] = $definition;
         }
-        bd(debug_backtrace());
-        bd($this, 'new repository');
+        //bd(debug_backtrace());
+        //bd($this, 'new repository');
 //		throw new InvalidArgumentException('Constructed ');
     }
 
@@ -39,7 +39,7 @@ final class ConversionRepository
             }
             return new ConversionDefinition($key, $base, $definition['shortLabel'], $definition['conversion']);
         }, array_keys($data['units']), $data['units']);
-        bd($list, 'list');
+       //bd($list, 'list');
 
         return new ConversionRepository(...$list);
     }

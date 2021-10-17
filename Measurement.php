@@ -35,9 +35,9 @@ class Measurement extends WireData
 		$this->set('unit', $unit);
 		$this->set('magnitude', $magnitude);
 		$this->set('quantity', $quantity);
-		bd($this, 'In Construct - 3 set');
+		//bd($this, 'In Construct - 3 set');
 		if($this->get('unit') and $this->get('quantity')) {
-			bd($this, 'In Construct try shortLabel');
+			//bd($this, 'In Construct try shortLabel');
 			$units = FieldtypeMeasurement::getUnits($this->quantity);
 			if(isset($units['shortLabel'])) $this->set('shortLabel', $units['shortLabel']);
 		} else {
@@ -56,7 +56,7 @@ class Measurement extends WireData
     private function loadUnits(string $path): void
     {
 		$path = FieldtypeMeasurement::configFile($path);
-    	bd($path, 'loading');
+    	//bd($path, 'loading');
     	$this->units = ConversionRepository::fromFile($path);
     }
 
@@ -71,7 +71,7 @@ class Measurement extends WireData
      */
     public function convertFrom($value, ?string $unit = null): Measurement
     {
-    	bd($this, 'this in from');
+    	//bd($this, 'this in from');
         if (! $unit) {
             $this->magnitude = $value;
             return $this;
@@ -125,7 +125,7 @@ class Measurement extends WireData
 
 	public function subtract(Measurement $measurement2, ?string $unit = null) {
 		$operands = $this->operands($measurement2, $unit);
-		bd($operands, 'operands');
+		//bd($operands, 'operands');
 		$diff = $operands['value1'] - $operands['value2'];
 		$sumUnit = ($unit) ?: $this->get('unit');
 		$sumObject = new Measurement($this->get('quantity'), $operands['base'], $diff);
@@ -157,8 +157,8 @@ class Measurement extends WireData
 	 */
     public function valueAs(string $unit, ?int $decimals = null, bool $round = true)
     {
-    	bd($this, 'this valueAs');
-    	bd($unit, 'unit in valueAs');
+    	//bd($this, 'this valueAs');
+    	//bd($unit, 'unit in valueAs');
         if (is_null($this->magnitude)) {
             throw new ConvertorException("From Value Not Set.");
         }
@@ -176,7 +176,7 @@ class Measurement extends WireData
 
         $conversionFrom = $this->units->getConversion($this->get('unit'));
         $conversionTo = $this->units->getConversion($unit);
-        bd($conversionTo, 'conversion');
+       //bd($conversionTo, 'conversion');
 
         if (! $this->baseUnit) {
             $this->baseUnit = $conversionFrom->getBaseUnit();
@@ -192,7 +192,7 @@ class Measurement extends WireData
         if (! is_null($decimals)) {
             return $this->round($result, $decimals, $round);
         }
-bd($result, 'result');
+//bd($result, 'result');
         return $result;
     }
 
@@ -304,7 +304,7 @@ bd($result, 'result');
 		} else {
     		$options = $this->formatOptions($options);
 		}
-		bd($options, 'options in render');
+		//bd($options, 'options in render');
 		$magnitudes = (is_array($this->magnitude)) ? $this->magnitude : [$this->magnitude];
 		$units = explode('|', $this->unit);
 		$labels = explode('|', $this->shortLabel);
@@ -371,7 +371,7 @@ bd($result, 'result');
 		foreach($options as $key => $option) {
 			$defaultOptions[$key] = $option;
 		}
-		bd($defaultOptions, 'defaultoptions');
+		//bd($defaultOptions, 'defaultoptions');
 		return $defaultOptions;
 	}
 }

@@ -108,7 +108,7 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		// if for some reason we already get a valid value, then just return it
 		if($value instanceof Measurement) return $value;
-		bd($value, 'wakeup value');
+		//bd($value, 'wakeup value');
 		// start a blank value to be populated
 		$measurement = $this->getBlankValue($page, $field);
 
@@ -116,9 +116,9 @@ class FieldtypeMeasurement extends Fieldtype {
 		if(empty($value) || !is_array($value)) return $measurement;
 
 		// create new Measurement object
-		bd($measurement, 'measurement0 in ___wakeupValue');
+		//bd($measurement, 'measurement0 in ___wakeupValue');
 		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
-		bd($measurement, 'measurement1 in ___wakeupValue');
+		//bd($measurement, 'measurement1 in ___wakeupValue');
 		$measurement->unit = $value['unit']; // canonical unit name
 		$measurement->quantity = $value['quantity']; // quantity measured by this unit - must match name of php file containing unit definitions and conversions
 		// get the current shortLabel and plural from the config file - not a saved version
@@ -132,7 +132,7 @@ class FieldtypeMeasurement extends Fieldtype {
 			}
 		}
 		// $measurement->resetTrackChanges();
-		bd($measurement, 'measurement2 in ___wakeupValue');
+		//bd($measurement, 'measurement2 in ___wakeupValue');
 		return $measurement;
 	}
 
@@ -144,16 +144,16 @@ class FieldtypeMeasurement extends Fieldtype {
 	 */
 	public function getBlankValue(Page $page, Field $field) {
 		$measurement = new Measurement($field->quantity, null, []);
-		bd($measurement, 'new measurement in getBlankValue');
-		bd($field, 'field in getBlankValue');
-		bd($field->quantity, 'quantity in getBlankValue');
+		//bd($measurement, 'new measurement in getBlankValue');
+		//bd($field, 'field in getBlankValue');
+		//bd($field->quantity, 'quantity in getBlankValue');
 		if ($field->quantity) $measurement->set('quantity', $field->quantity);
 		if ($field->units) $measurement->set('units', $field->units);
 		$measurement->set('magnitude', []);
 		$measurement->set('shortLabel', null);
 		$measurement->set('plural', null);
 		$measurement->setTrackChanges(true);
-		bd($measurement, 'measurement returned from getBlankValue');
+		//bd($measurement, 'measurement returned from getBlankValue');
 		return $measurement;
 	}
 
@@ -169,7 +169,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	public function ___sleepValue(Page $page, Field $field, $value) {
 
 		$sleepValue = array();
-bd($value, 'value in sleep');
+//bd($value, 'value in sleep');
 		// if we are given something other than a Measurement object,
 		// then just return a blank array
 		if(!$value instanceof Measurement) return $sleepValue;
@@ -180,7 +180,7 @@ bd($value, 'value in sleep');
 			'unit' => $value->get('unit'),
 			'quantity' => $value->get('quantity')
 		);
-bd($sleepValue, 'sleepValue');
+//bd($sleepValue, 'sleepValue');
 		return $sleepValue;
 	}
 
@@ -303,7 +303,7 @@ bd($sleepValue, 'sleepValue');
 	}
 
 	public static function getUnits($quantity) {
-		bd(debug_backtrace(), 'getUnits' . $quantity);
+		//bd(debug_backtrace(), 'getUnits' . $quantity);
 		$unitsFile = self::configFile($quantity);
 		if(!file_exists($unitsFile)) return;
 		$conversions = include $unitsFile;

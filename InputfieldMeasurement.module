@@ -65,18 +65,18 @@ class InputfieldMeasurement extends Inputfield {
 	}
 
 	protected function afterChanged(HookEvent $event) {
-    	bd('in after changed hook');
+    	//bd('in after changed hook');
 		$p = $event->object;
 		$p->of(false);
 		$change = $event->arguments(0);
 		$changeField = $p->$change;
-		bd($changeField, '$changeField');
+		//bd($changeField, '$changeField');
 		if(is_object($changeField) and get_class($changeField) == 'ProcessWire\Measurement') {
 			$old = $event->arguments(1); // old value
 			$new = $event->arguments(2); // new value
-			bd(['old' => $old, 'new' => $new], 'changes to field');
+			//bd(['old' => $old, 'new' => $new], 'changes to field');
 			if($old->get('magnitude') == $new->get('magnitude') and $old->get('unit') != $new->get('unit')) {
-				bd(['old unit' => $old->get('unit'), 'new unit' => $new->get('unit')], 'change of unit');
+				//bd(['old unit' => $old->get('unit'), 'new unit' => $new->get('unit')], 'change of unit');
 				$changeField->set('unit', $old->get('unit'));
 				$changeField->convertTo($new->get('unit'));
 			}
@@ -98,14 +98,14 @@ class InputfieldMeasurement extends Inputfield {
 		$name = $this->attr('name');
 		$field = $this->field;
 //        $fieldSettingsPath = wire('config')->urls->admin."setup/field/edit?id=$field->id#fieldtypeConfig";
-		bd($this->attr('value'), 'value 0');
+		//bd($this->attr('value'), 'value 0');
 		if($this->attr('value')) $value = $this->attr('value'); // Measurement object
 		else {
 			$value = new Measurement();
 		}
-		bd($value->get('quantity'), 'quantity');
-		bd($value->get('units'), 'units');
-		bd($value->get('unit'), 'unit');
+		//bd($value->get('quantity'), 'quantity');
+		//bd($value->get('units'), 'units');
+		//bd($value->get('unit'), 'unit');
 		$inputfields = new InputfieldFieldset();
 		$numberOfCols = 2;
 		if(!$field->hide_quantity) $numberOfCols ++;
@@ -137,7 +137,7 @@ class InputfieldMeasurement extends Inputfield {
 		$f->label = $this->_("Unit");
 		$f->attr('name', "{$name}_unit");
 		$f->attr('value', $value->get('unit'));
-		bd($value, 'value');
+		//bd($value, 'value');
 		$units = FieldtypeMeasurement::getUnits($value->get('quantity'));
 		foreach($value->get('units') as $unit) {
 			$shortLabel = $units[$unit]['shortLabel'];
@@ -200,7 +200,7 @@ class InputfieldMeasurement extends Inputfield {
 
 		// loop inputs and set them if changed
         foreach($input_names as $key => $name) {
-        	bd(['input name' => $input->$name, 'value->key' => $value->key], 'input name etc');
+        	//bd(['input name' => $input->$name, 'value->key' => $value->key], 'input name etc');
             if(isset($input->$name) && $value->$key != $input->$name) {
             	if($key == 'magnitude') {
 					$input->$name = trim($input->$name);
@@ -223,11 +223,11 @@ class InputfieldMeasurement extends Inputfield {
 		$oldUnit = $old->get('unit');
 		$newUnit = $new->get('unit');
 
-		bd($value->get('magnitude'), 'Magnitude');
-		bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
-		bd($value->get('update'), 'update?');
+		//bd($value->get('magnitude'), 'Magnitude');
+		//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
+		//bd($value->get('update'), 'update?');
 		if($oldUnit and $newUnit and  $oldUnit != $newUnit and $value->get('update') == 1) {
-			bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
+			//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
 			// Check consistency of units and magnitude
 			if(count($value->get('magnitude')) != count((explode('|', $oldUnit)))) {
 				throw new ConvertorException("Magnitude not consistent with original unit");
@@ -235,14 +235,14 @@ class InputfieldMeasurement extends Inputfield {
 			$value->set('unit', $oldUnit);
 			$value->convertTo($newUnit);
 		} else {
-			bd('No change');
+			//bd('No change');
 			// Check consistency of units and magnitude
 			if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
 				throw new ConvertorException("Magnitude not consistent with chosen unit");
 			}
 		}
-		bd($value, 'value at end of process_input');
-		bd($this, 'this at end of process_input');
+		//bd($value, 'value at end of process_input');
+		//bd($this, 'this at end of process_input');
         return $this;
     }
 
