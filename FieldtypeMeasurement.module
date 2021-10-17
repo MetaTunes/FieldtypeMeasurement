@@ -15,7 +15,8 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  *
  * http://processwire.com
- * @version 0.0.2
+ * @version 0.0.3
+ * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 minor mods
  * @since 0.0.0 initial version
  *
@@ -41,7 +42,7 @@ class FieldtypeMeasurement extends Fieldtype {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.2',
+			'version' => '0.0.3',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
@@ -117,7 +118,13 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		// create new Measurement object
 		//bd($measurement, 'measurement0 in ___wakeupValue');
-		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
+
+
+//		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
+
+		$measurement->magnitude = $measurement->valueFromBase($value['data'], $value['unit']);
+		if(!is_array($measurement->magnitude)) $measurement->magnitude = [$measurement->magnitude];
+
 		//bd($measurement, 'measurement1 in ___wakeupValue');
 		$measurement->unit = $value['unit']; // canonical unit name
 		$measurement->quantity = $value['quantity']; // quantity measured by this unit - must match name of php file containing unit definitions and conversions
@@ -129,6 +136,8 @@ class FieldtypeMeasurement extends Fieldtype {
 			}
 			if(isset($units[$measurement->unit]['plural'])) {
 				$measurement->plural = $units[$measurement->unit]['plural'];
+			} else {
+				if(isset($measurement->plural)) unset($measurement->plural);
 			}
 		}
 		// $measurement->resetTrackChanges();
@@ -174,9 +183,10 @@ class FieldtypeMeasurement extends Fieldtype {
 		// then just return a blank array
 		if(!$value instanceof Measurement) return $sleepValue;
 
-		if(!is_array($value->get('magnitude'))) $value->set('magnitude', [$value->get('magnitude')]);
+//		if(!is_array($value->get('magnitude'))) $value->set('magnitude', [$value->get('magnitude')]);
 		$sleepValue = array(
-			'data' => implode('|', $value->get('magnitude')),
+//			'data' => implode('|', $value->get('magnitude')),
+			'data' => (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase()),
 			'unit' => $value->get('unit'),
 			'quantity' => $value->get('quantity')
 		);
@@ -212,7 +222,7 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		$schema = parent::getDatabaseSchema($field);
 
-		$schema['data'] = 'varchar(64) NOT NULL';
+		$schema['data'] = 'decimal NOT NULL';
 		$schema['unit'] = 'text NOT NULL';
 		$schema['quantity'] = 'text NOT NULL';
 

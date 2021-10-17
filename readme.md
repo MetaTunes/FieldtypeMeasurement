@@ -169,4 +169,6 @@ Combination units (see definition above) need to be defined with a pipe join for
     "plural" => "feet|inches"
 )
 ````
- 
+ #### Changelog
+ * 0.0.3 revised db schema to hold base unit value
+ * 0.0.2 additional formatting options

@@ -48,6 +48,7 @@ final class ConversionDefinition
 
     public function convertToBase($value): float  // $value can be an array for combi units
     {
+    	//bd($this->conversion);
         if (is_numeric($this->conversion)) {
             return $value * $this->conversion;
         } elseif (is_callable($this->conversion)) {

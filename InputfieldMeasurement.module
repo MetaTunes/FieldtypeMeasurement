@@ -13,7 +13,8 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
- * @version 0.0.2
+ * @version 0.0.3
+ * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 additional formatting options
  * @since 0.0.0 initial version
  *
@@ -25,7 +26,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.2',
+            'version' => '0.0.3',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement")
         );

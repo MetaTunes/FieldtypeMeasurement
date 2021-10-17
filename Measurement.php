@@ -101,6 +101,10 @@ class Measurement extends WireData
 		return $this;
     }
 
+    public function convertFromBase($value) {
+		$baseUnit = $this->units->getConversion($this->get('unit'))->getBaseUnit();
+    	return $this->convertFrom($value, $baseUnit);
+	}
 
     public function convertTo(string $unit, ?int $decimals = null, bool $round = true) {
 		$this->magnitude = $this->valueAs($unit, $decimals, $round);
@@ -112,6 +116,12 @@ class Measurement extends WireData
 		if(isset($units[$unit]['plural'])) {
 			$this->set('plural', $units[$unit]['plural']);
 		}
+		return $this;
+	}
+
+	public function convertToBase() {
+		$baseUnit = $this->units->getConversion($this->get('unit'))->getBaseUnit();
+		$this->convertTo($baseUnit);
 		return $this;
 	}
 
@@ -196,13 +206,25 @@ class Measurement extends WireData
         return $result;
     }
 
+    public function valueAsBase() {
+		$conversionFrom = $this->units->getConversion($this->get('unit'));
+		$this->baseUnit = $conversionFrom->getBaseUnit();
+		return $conversionFrom->convertToBase($this->get('magnitude'));
+	}
+
+	public function valueFromBase($value, $unit) {
+		$conversionTo = $this->units->getConversion($unit);
+		return $conversionTo->convertFromBase($value);
+//		$baseUnit = $this->units->getConversion($this->get('unit'))->getBaseUnit();
+	}
+
     /**
      * @param string[] $units
      * @param ?int     $decimals
      * @param bool     $round
      * @return array
      */
-    private function valueAsMany($units = [], ?int $decimals = null, $round = true)
+    public function valueAsMany($units = [], ?int $decimals = null, $round = true)
     {
         return array_map(function ($unit) use ($decimals, $round) {
             return $this->valueAs($unit, $decimals, $round);
