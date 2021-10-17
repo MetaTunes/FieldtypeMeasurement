@@ -209,6 +209,7 @@ class Measurement extends WireData
     public function valueAsBase() {
 		$conversionFrom = $this->units->getConversion($this->get('unit'));
 		$this->baseUnit = $conversionFrom->getBaseUnit();
+		$this->magnitude = (is_array($this->get('magnitude')) && count($this->get('magnitude')) == 1) ? $this->get('magnitude')[0] : $this->get('magnitude');
 		return $conversionFrom->convertToBase($this->get('magnitude'));
 	}
 

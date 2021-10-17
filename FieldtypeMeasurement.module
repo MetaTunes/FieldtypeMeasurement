@@ -184,9 +184,12 @@ class FieldtypeMeasurement extends Fieldtype {
 		if(!$value instanceof Measurement) return $sleepValue;
 
 //		if(!is_array($value->get('magnitude'))) $value->set('magnitude', [$value->get('magnitude')]);
+
+		$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
+		bd($data);
 		$sleepValue = array(
 //			'data' => implode('|', $value->get('magnitude')),
-			'data' => (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase()),
+			'data' => $data,
 			'unit' => $value->get('unit'),
 			'quantity' => $value->get('quantity')
 		);
