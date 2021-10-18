@@ -56,6 +56,7 @@ $page->getUnformatted('my_measurement_field');
 ````
 or by setting $page->of(false).
 This is an object of class "Measurement" (which extends WireData).
+### Measurement methods
 The following methods are available for Measurement objects:
 * *format(?array $options = [])*: Change the formatting used in subsequent rendering.
 The default options are:
@@ -89,14 +90,22 @@ Rounds (or truncates) the value to the specified number of decimal places (if gi
 * *convertFrom($value, ?string $unit = null])*: Sets the magnitude to the value, converting from the specified compatible unit (if given) to the current unit of the measurement object. This method updates the current object.
 * *convertTo(string $unit, ?int $decimals = null, ?bool $round = true)*: Converts the object to one with the specified unit, carrying out the relevant conversion of the magnitude.
 Note that if the specified unit is not in the selectable options list, then blank will be displayed as an option; changing the field setup details to include the relevant option will cause it to display. This method updates the current object.
-* *add(Measurement $measurement2, ?string $unit = null)*: Add measurement2 to this measurement. The result is a new measurement object with the magnitude equal to the sum; the unit will be as specified by $unit, if present, otherwise it will be the unit of this measurement.
-* *subtract(Measurement $measurement2, ?string $unit = null)*: Subtract measurement2 from this measurement. The result is a new measurement object with the magnitude equal to the difference; the unit will be as specified by $unit, if present, otherwise it will be the unit of this measurement.
+* *add(Measurement $measurement2)*: Add measurement2 to this measurement. The result is in the units of this measurement (measurement2 will be converted as appropriate).
+* *subtract(Measurement $measurement2)*: Subtract measurement2 from this measurement. The result is in the units of this measurement (measurement2 will be converted as appropriate).
 * *getUnits(?string $unit = null)*: Get all the compatible units for $unit. If $unit is null, this is all the compatible units for the current unit of the measurement object.
 Returns an array ```['unit name1' => 'unit name1', 'unit name2' => 'unit name2', etc...]```.
 * *addUnit(string $unit, string $base, string $shortLabel, $conversion, ?string $plural)*: Add a new unit and conversion in memory. $base should be the compatible base unit. $shortLabel is the abbreviation.
 The arguments match the format of the config files (see below for more details) but the new unit is only in memory - it is not added to the related file.
 Returns true/false.
 * *removeUnit(string $unit)*: Remove a unit (which had been added using addUnit) from memory.
+
+### Other functions
+Various static functions are available:
+* *FieldtypeMeasurement::sumMeasurements(...$measurements)* Accepts either a single array of Measurement objects or a list of them. Returns the sum in base units. Use ->convertTo() method on the result if you want different units.
+* *FieldtypeMeasurement::configFile($quantity)* Returns the contents of the config file for the given quantity, as an array.
+* *FieldtypeMeasurement::getUnits($quantity)* Returns the units in the config file for the given quantity, as an array.
+* *FieldtypeMeasurement::getBaseUnit($quantity)* Returns the base unit for $quantity as a string.
+
 
 This API can be used outside of the fieldtype context - just create a new Measurement object:
 ````
@@ -170,5 +179,6 @@ Combination units (see definition above) need to be defined with a pipe join for
 )
 ````
  #### Changelog
+ * 0.0.4 altered add() and subtract() methods, added new static function FieldtypeMeasurement::addMeasurements()
  * 0.0.3 revised db schema to hold base unit value
  * 0.0.2 additional formatting options

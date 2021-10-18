@@ -13,7 +13,8 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
- * @version 0.0.3
+ * @version 0.0.4
+ * @since 0.0.3 bug fixes
  * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 additional formatting options
  * @since 0.0.0 initial version
@@ -237,9 +238,12 @@ class InputfieldMeasurement extends Inputfield {
 			$value->convertTo($newUnit);
 		} else {
 			//bd('No change');
-			// Check consistency of units and magnitude
-			if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
-				throw new ConvertorException("Magnitude not consistent with chosen unit");
+			if($value->get('unit')) {
+				// Check consistency of units and magnitude
+				//bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $newUnit)))], 'count compare');
+				if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
+					throw new ConvertorException("Magnitude not consistent with chosen unit");
+				}
 			}
 		}
 		//bd($value, 'value at end of process_input');

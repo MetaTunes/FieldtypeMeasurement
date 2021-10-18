@@ -15,10 +15,12 @@
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  *
  * http://processwire.com
- * @version 0.0.3
+ * @version 0.0.4
+ * @since 0.0.3 added static function addMeasurement(), altered add() and subtract() methods to Measurement, bug fixes
  * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 minor mods
  * @since 0.0.0 initial version
+ *
  *
  *
  *  * MODULE CONFIGURATION PROPERTIES
@@ -27,6 +29,7 @@
  * @property string $units The units to be presented as options
  *
  */
+
 class FieldtypeMeasurement extends Fieldtype {
 
 	/**
@@ -42,7 +45,7 @@ class FieldtypeMeasurement extends Fieldtype {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.3',
+			'version' => '0.0.4',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
@@ -121,15 +124,19 @@ class FieldtypeMeasurement extends Fieldtype {
 
 
 //		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
-
-		$measurement->magnitude = $measurement->valueFromBase($value['data'], $value['unit']);
+		$measurement->quantity = $value['quantity'];
+		if($value['unit']) {
+			$measurement->unit = $value['unit'];
+			$measurement->magnitude = $measurement->valueFromBase($value['data'], $value['unit']);
+		} else {
+			$measurement->unit = self::getBaseUnit($measurement->quantity);
+			$measurement->magnitude = 0;
+		}
 		if(!is_array($measurement->magnitude)) $measurement->magnitude = [$measurement->magnitude];
 
 		//bd($measurement, 'measurement1 in ___wakeupValue');
-		$measurement->unit = $value['unit']; // canonical unit name
-		$measurement->quantity = $value['quantity']; // quantity measured by this unit - must match name of php file containing unit definitions and conversions
 		// get the current shortLabel and plural from the config file - not a saved version
-		if($value['unit'] and $value['quantity']) {
+		if($measurement->unit and $measurement->quantity) {
 			$units = FieldtypeMeasurement::getUnits($measurement->quantity);
 			if(isset($units[$measurement->unit]['shortLabel'])) {
 				$measurement->shortLabel = $units[$measurement->unit]['shortLabel'];
@@ -183,10 +190,13 @@ class FieldtypeMeasurement extends Fieldtype {
 		// then just return a blank array
 		if(!$value instanceof Measurement) return $sleepValue;
 
-//		if(!is_array($value->get('magnitude'))) $value->set('magnitude', [$value->get('magnitude')]);
-
-		$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
-		bd($data);
+		//bd($value);
+		if($value->get('unit')) {
+			$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
+		} else {
+			$data = 0;
+		}
+		//bd($data);
 		$sleepValue = array(
 //			'data' => implode('|', $value->get('magnitude')),
 			'data' => $data,
@@ -324,6 +334,15 @@ class FieldtypeMeasurement extends Fieldtype {
 		return $units;
 	}
 
+	public static function getBaseUnit($quantity) {
+		//bd(debug_backtrace(), 'getUnits' . $quantity);
+		$unitsFile = self::configFile($quantity);
+		if(!file_exists($unitsFile)) return;
+		$conversions = include $unitsFile;
+		$base = $conversions['base'];
+		return $base;
+	}
+
 	public static function configFile($quantity) {
 		$configFile = __DIR__ . '/Config/' . $quantity . '.php';
 		$userFile = wire()->config->paths->templates . 'Measurement/' . $quantity . '.php';
@@ -333,6 +352,20 @@ class FieldtypeMeasurement extends Fieldtype {
 			$unitsFile = $configFile;
 		}
 		return $unitsFile;
+	}
+
+	public static function sumMeasurements(...$measurements) {
+		if(is_array($measurements[0])) $measurements = $measurements[0];
+		if(!is_a($measurements[0], 'ProcessWire\Measurement')) return 0;
+		$quantity = $measurements[0]->quantity;
+		$baseUnit = self::getBaseUnit($quantity);
+		$sum = new Measurement($quantity, $baseUnit, 0);
+		foreach($measurements as $measurement) {
+			if(is_a($measurements[0], 'ProcessWire\Measurement')) {
+				$sum->add($measurement);
+			}
+		}
+		return $sum;
 	}
 
 }

@@ -38,10 +38,11 @@ class Measurement extends WireData
 		//bd($this, 'In Construct - 3 set');
 		if($this->get('unit') and $this->get('quantity')) {
 			//bd($this, 'In Construct try shortLabel');
-			$units = FieldtypeMeasurement::getUnits($this->quantity);
-			if(isset($units['shortLabel'])) $this->set('shortLabel', $units['shortLabel']);
-		} else {
-			$this->set('shortLabel', '');
+			$units = FieldtypeMeasurement::getUnits($this->get('quantity'));
+			if(isset($units[$unit]['shortLabel'])) $this->set('shortLabel', $units[$unit]['shortLabel']);
+			if(isset($units[$unit]['plural'])) $this->set('plural', $units[$unit]['plural']);
+//		} else {
+//			$this->set('shortLabel', '');
 		}
         if($this->unit and !is_null($this->magnitude)) {
             $this->convertFrom($this->magnitude, $this->unit);
@@ -125,21 +126,18 @@ class Measurement extends WireData
 		return $this;
 	}
 
-	public function add(Measurement $measurement2, ?string $unit = null) {
-		$operands = $this->operands($measurement2, $unit);
+	public function add(Measurement $measurement) {
+		$operands = $this->operands($measurement, $this->get('unit'));
 		$sum = $operands['value1'] + $operands['value2'];
-		$sumUnit = ($unit) ?: $this->get('unit');
-		$sumObject = new Measurement($this->get('quantity'), $operands['base'], $sum);
-		return $sumObject->convertTo($sumUnit);
+		$this->convertFromBase($sum);
+		return $this;
 	}
 
-	public function subtract(Measurement $measurement2, ?string $unit = null) {
-		$operands = $this->operands($measurement2, $unit);
-		//bd($operands, 'operands');
+	public function subtract(Measurement $measurement2) {
+		$operands = $this->operands($measurement2, $this->get('unit'));
 		$diff = $operands['value1'] - $operands['value2'];
-		$sumUnit = ($unit) ?: $this->get('unit');
-		$sumObject = new Measurement($this->get('quantity'), $operands['base'], $diff);
-		return $sumObject->convertTo($sumUnit);
+		$this->convertFromBase($diff);
+		return $this;
 	}
 
 	protected function operands(Measurement $measurement2, ?string $unit) {
