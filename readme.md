@@ -118,6 +118,18 @@ $measurement->get('quantity');
 ````
 For combination units, the magnitude must be an array or a string of numbers with pipe joins, e.g. '2|3.5'
 
+### Use in selectors
+When using selectors, two things are important to remember:
+* The subfields are as stored in the database. Magnitudes are stored in terms of base units, so any selector must reflect this = e.g. "length.magnitude>=1" will select pages where the length is greater than 1 metre, regardless of the units used for the field. This means that selectors will operate consistently, regardless of the units used to display in the admin. It also means that the results can be used in further calculations. For example, it is possible to add all lengths greater than 1 metre and display the result in feet and inches like this:
+````
+$pageArray = $pages->find("template=basic-page, length.magnitude>0.9, include=all");
+if($pageArray->count() > 0) {
+    $sum = FieldtypeMeasurement::sumMeasurements($pageArray->each(function($p) { 
+    $p->of(false);
+    })->each('length'))->convertTo('foot|inch')->render();
+}
+````
+
 ## Config files
 There is a file for each quantity - e.g. "Area.php" - in the module 'Config' directory. These can be modified but may be overwritten at the next module update.
 Therefore, if you wish to modify a file (or indeed create a new one for a new quantity), it is better to make a copy and place it in "your_site/templates/" in a directory named "Measurement", then modify that.
