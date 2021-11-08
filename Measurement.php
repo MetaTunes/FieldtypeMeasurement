@@ -67,8 +67,6 @@ class Measurement extends BaseMeasurement
 
     public function __construct(?string $quantity = null, ?string $unit = null, $magnitude = null)
     {
-//    	d(debug_backtrace());
-//		d($this);
 		if(!is_array($magnitude)) $magnitude = explode('|', $magnitude);
 		try {
 			if($quantity) $this->loadUnits($quantity);
@@ -208,6 +206,17 @@ class Measurement extends BaseMeasurement
 		return self::sumMeasurements([$this, $measurement], $unit);
 	}
 
+	public function sumOf(...$measurements) {
+		$unit = $this->get('unit');
+		$result = self::sumMeasurements($measurements, $unit);
+		if($this->quantity != $result->quantity) {
+			throw new MeasurementDifferentTypeException(sprintf($this->_('Measurements are not of the same quantity. Object is %1$s, measurements are %2$s.'), $this->quantity, $result->quantity));
+		}
+		$this->magnitude = $result->magnitude;
+		$this->baseMagnitude = $result->baseMagnitude;
+		return $this;
+}
+
 	/**
 	 * @throws MeasurementDifferentTypeException
 	 */
@@ -256,6 +265,15 @@ class Measurement extends BaseMeasurement
 			$result = new BaseMeasurement(1, new MeasurementDimension(1,1));
 		}
 		return $result;
+	}
+
+	public function productOf(...$measurements) {
+		$quantity = $this->get('quantity');
+		$unit = $this->get('unit');
+		$result = self::combineMeasurements($measurements, [], $quantity, $unit);
+		$this->magnitude = $result->magnitude;
+		$this->baseMagnitude = $result->baseMagnitude;
+		return $this;
 	}
 
 	public function subtract(Measurement $measurement, ?string $unit = null) {
@@ -750,7 +768,6 @@ class Measurement extends BaseMeasurement
 		$tempDimension = new MeasurementDimension(1, 1);
 		$tempMagnitude = 1;
 		$allMeasurements = array_merge($numerators, $denominators); // numeric keys so just appends denominators
-		d($allMeasurements, 'allMeasurements');
 		foreach($allMeasurements as $key => $measurement) {
 			$type = (in_array($measurement, $numerators)) ? 'numerator' : 'denominator';
 			if(!is_a($measurement, 'ProcessWire\Measurement') && !is_a($measurement, 'ProcessWire\BaseMeasurement') ) {
@@ -783,7 +800,6 @@ class Measurement extends BaseMeasurement
 					throw new MeasurementInvalidUnitException(sprintf(__('Unit %1$s is not compatible with chosen quantity %2$s'), $unit, $quantity));
 				} else {
 					$result = new Measurement($quantity, $unit);
-					d($tempMagnitude, 'tempmag');
 					$result->convertFromBase($tempMagnitude);
 				}
 			}
