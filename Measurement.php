@@ -162,7 +162,9 @@ class Measurement extends BaseMeasurement
 			return $this;
 		}
     	try {
-			return $this->convertFrom($value, $baseUnit);
+			$result = $this->convertFrom($value, $baseUnit);
+			$result->set('baseMagnitude', $value);
+			return $result;
 		} catch(MeasurementInvalidUnitException|MeasurementDifferentTypeException|MeasurementException $e) {
 			$this->error($e->getMessage());
 			return $this;

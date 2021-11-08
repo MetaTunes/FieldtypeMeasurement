@@ -115,13 +115,17 @@ The following methods are available for Measurement objects:
 
 * *add(Measurement $measurement, ?string $unit = null)*: Add $measurement to this measurement. The result is in the units of this measurement unless $unit is specified ($measurement will be converted as appropriate). Returns a new Measurement object.
 
+* *sumOf(...$measurements)*: Adds the measurements (using *Measurement::sumMeasurements()* ). Updates the current object which must be of the same quantity as the measurements to be summed.
+
 * *subtract(Measurement $measurement, ?string $unit = null)*: Subtract $measurement from this measurement. The result is in the units of this measurement unless $unit is specified ($measurement will be converted as appropriate). Returns a new Measurement object.
 
-* *multiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: If $multiplier is a scalar value then the measurement will simply be scaled. If $multiplier is a Measurement object then the result will be computed using dimensional analysis (both the current object and $measurement must be of quantities that have dimensions defined). If $quantity and $unit are not defined then they will be inferred as far as possible, otherwise they will be checked for consistency and the result will be returned as specified. See *Measurement::combineMeasurements()* for more details.
+* *multiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: If $multiplier is a number then the measurement will simply be scaled. If $multiplier is a Measurement object then the result will be computed using dimensional analysis (both the current object and $measurement must be of quantities that have dimensions defined). If $quantity and $unit are not defined then they will be inferred as far as possible, otherwise they will be checked for consistency and the result will be returned as specified. See *Measurement::combineMeasurements()* for more details.
+
+* *productOf(...$measurements)*: Multiplies the measurements using dimensional analysis (see *Measurement::combineMeasurements()* ) and updates the current object, which must have a quantity, dimension and units consistent with the intended product).
 
 * *negate()*: Multiply by -1.
 
-* *power(int $exp, ?string $quantity = null, ?string $unit = null)*: Raise the measurement to the given power (positive or negative integer). This uses multiplyBy() or divideBy() the appropriate number of times to get the resulting measurement. If $exp is 0 it returns a scalar BaseMeasurement of magnitude 1.
+* *power(int $exp, ?string $quantity = null, ?string $unit = null)*: Raise the measurement to the given power (positive or negative integer). This uses multiplyBy() or divideBy() the appropriate number of times to get the resulting measurement. If $exp is 0 it returns a dimensionless BaseMeasurement of magnitude 1.
 
 * *divideBy($divisor, ?string $quantity = null, ?string $unit = null)*: Analagous to multiplyBy() above.  See *Measurement::combineMeasurements()* for more details.
 
@@ -281,6 +285,7 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
 
  # Changelog
+ * 0.0.6 minor fixes and new Measurement methods
  * 0.0.5 allowed specific formats in config file, additional units, dimensional analysis supported
  * 0.0.4 altered add() and subtract() methods and added related static functions
  * 0.0.3 revised db schema to hold base unit value

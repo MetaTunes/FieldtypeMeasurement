@@ -16,7 +16,8 @@
  *
  * http://processwire.com
  *
- * @version 0.0.5
+ * @version 0.0.6
+ * @since 0.0.5 minor fixes and new Measurement methods
  * @since 0.0.4 allowed specific formats in config file, additional units, dimensional analysis supported
  * @since 0.0.3 added static function addMeasurement(), altered add() and subtract() methods to Measurement, bug fixes
  * @since 0.0.2 revised db schema to hold base unit value
