@@ -162,7 +162,6 @@ class Measurement extends BaseMeasurement
 			return $this;
 		}
     	try {
-			d([$value, $baseUnit]);
 			return $this->convertFrom($value, $baseUnit);
 		} catch(MeasurementInvalidUnitException|MeasurementDifferentTypeException|MeasurementException $e) {
 			$this->error($e->getMessage());
@@ -790,7 +789,6 @@ class Measurement extends BaseMeasurement
 			}
 		}
 		$result = new BaseMeasurement($tempMagnitude, $tempDimension);
-		d($result, 'result');
 		$compatibleQuantities = $tempDimension->getQuantities();
 		if($quantity) {
 			if(!in_array($quantity, $compatibleQuantities)) {
