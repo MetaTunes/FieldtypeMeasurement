@@ -6,14 +6,15 @@
  *
  * @author Mark Evens
  * @license Licensed under GNU/GPL v3
- * @link http://processwire.com/talk
+ * @link https://processwire.com/talk/topic/26241-fieldtypemeasurement/
  * 
  * ProcessWire 2.x, 3.x 
  * Copyright (C) 2016 by Ryan Cramer 
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
- * @version 0.0.4
+ * @version 0.0.5
+ * @since 0.0.4 allowed specific formats in config file, additional units, dimensional analysis supported
  * @since 0.0.3 bug fixes
  * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 additional formatting options
@@ -27,7 +28,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.3',
+            'version' => '0.0.5',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement")
         );
@@ -59,48 +60,22 @@ class InputfieldMeasurement extends Inputfield {
      *
      */
     public function init() {
-//    	bd($this, 'this in init');
-//    	bd(wire()->input->id, 'page in init');
-//    	$id = wire()->input->id;
-//		$this->addHookAfter("Page(id=$id)::changed", $this, 'afterChanged');
 		parent::init();
 	}
 
-	protected function afterChanged(HookEvent $event) {
-    	//bd('in after changed hook');
-		$p = $event->object;
-		$p->of(false);
-		$change = $event->arguments(0);
-		$changeField = $p->$change;
-		//bd($changeField, '$changeField');
-		if(is_object($changeField) and get_class($changeField) == 'ProcessWire\Measurement') {
-			$old = $event->arguments(1); // old value
-			$new = $event->arguments(2); // new value
-			//bd(['old' => $old, 'new' => $new], 'changes to field');
-			if($old->get('magnitude') == $new->get('magnitude') and $old->get('unit') != $new->get('unit')) {
-				//bd(['old unit' => $old->get('unit'), 'new unit' => $new->get('unit')], 'change of unit');
-				$changeField->set('unit', $old->get('unit'));
-				$changeField->convertTo($new->get('unit'));
-			}
-		}
-
-
-//					$event->replace = true;
-//					$event->return;
-	}
-
-    /**
-     * Return the completed output of this Inputfield, ready for insertion in an XHTML form
-     *
-     * @return string
-     *
-     */
+	/**
+	 * Return the completed output of this Inputfield, ready for insertion in an XHTML form
+	 *
+	 * @return string
+	 *
+	 * @throws WirePermissionException
+	 */
     public function ___render() {
 
 		$name = $this->attr('name');
 		$field = $this->field;
 //        $fieldSettingsPath = wire('config')->urls->admin."setup/field/edit?id=$field->id#fieldtypeConfig";
-		//bd($this->attr('value'), 'value 0');
+		//bd($this->attr('value'), 'value in render 0');
 		if($this->attr('value')) $value = $this->attr('value'); // Measurement object
 		else {
 			$value = new Measurement();
@@ -110,27 +85,43 @@ class InputfieldMeasurement extends Inputfield {
 		//bd($value->get('unit'), 'unit');
 		$inputfields = new InputfieldFieldset();
 		$numberOfCols = 2;
-		if(!$field->hide_quantity) $numberOfCols ++;
 		if($field->show_update) $numberOfCols ++;
 		$colWidth = 100 / $numberOfCols;
+		$quantity = $value->get('quantity');
+		$units = Measurement::getUnits($value->get('quantity'));
+		$notes = Measurement::getQuantityNotes($quantity);
+
+
 
 		// quantity
 		if (!$field->hide_quantity) {
-			$f = $this->modules->get("InputfieldText");
-			$f->label = $this->_("Quantity");
+			$f = $this->modules->get("InputfieldMarkup");
+			$f->label = $value->get('quantity') . ': ' . $this->_("Notes");
 			$f->attr('name', "{$name}_quantity");
-			$f->attr('value', $value->get('quantity'));
-			$f->collapsed = Inputfield::collapsedNoLocked;
-			$f->columnWidth = $colWidth;
+			$out = ''; //"<h3>{$value->get('quantity')}</h3>";
+			$f->collapsed = Inputfield::collapsedYes;
+			$f->columnWidth = 100;
+			$notes = ($notes) ? "<p>$notes</p>" : null;
+			foreach($field->units as $unit) {
+				$label = (isset($units[$unit]['alias']) && $units[$unit]['alias']) ? $units[$unit]['alias'] : $unit;
+				$extraNotes = isset($units[$unit]['notes']) ? "<h4>{$label}</h4><p>{$units[$unit]['notes']}</p>" : null;
+				$notes .= $extraNotes;
+			}
+			if ($notes) $out .= $notes;
+			$f->attr('value', $out);
 			$inputfields->add($f);
 		}
 
         // magnitude
+		//bd($value->get('magnitude'), 'magnitude 3');
+
         $f = $this->modules->get("InputfieldText");
         $f->label = $this->_("Magnitude");
         $f->attr('name', "{$name}_magnitude");
         $f->attr('value', implode('|', $value->get('magnitude')));  // magnitude is an array
-		$f->notes = __("Enter a number or (for combi units) a set of numbers separated by a 'pipe' | - e.g 2|3.4");
+		$f->addClass('InputfieldMeasurement_magnitude');
+//		$f->attr('placeholder', $value->get('unit'));
+		$f->notes = __("Number or numbers separated by a 'pipe' | - e.g 2|3.4 (for combi units) ");
         $f->columnWidth = $colWidth;
         $inputfields->add($f);
 
@@ -140,11 +131,12 @@ class InputfieldMeasurement extends Inputfield {
 		$f->attr('name', "{$name}_unit");
 		$f->attr('value', $value->get('unit'));
 		//bd($value, 'value');
-		$units = FieldtypeMeasurement::getUnits($value->get('quantity'));
-		foreach($value->get('units') as $unit) {
-			$shortLabel = $units[$unit]['shortLabel'];
-			$f->addOption($unit, "$unit ($shortLabel)");
-		}
+		foreach($field->units as $unit) {
+			$shortLabel = (isset($units[$unit]) && isset($units[$unit]['shortLabel'])) ? $units[$unit]['shortLabel'] : null;
+			$alias = (isset($units[$unit]) && isset($units[$unit]['alias'])) ? $units[$unit]['alias'] : $unit;
+			if($shortLabel) $shortLabel = "($shortLabel)";
+			$f->addOption($unit, "$alias $shortLabel");
+			}
 //		$f->options = $value->units;
 		$f->columnWidth = $colWidth;
 		$inputfields->add($f);
@@ -183,72 +175,113 @@ class InputfieldMeasurement extends Inputfield {
      * Process the input from the given WireInputData (usually $input->get or $input->post), load and clean the value for use in this Inputfield.
      *
      * @param WireInputData $input
-     * @return $this
-     *
-     */
+	 * @return $this
+	 *
+	 */
 	public function ___processInput(WireInputData $input) {
-		$name = $this->attr('name');
-		$value = $this->attr('value');
-		$old = clone $value; // Don't want $old to change when $value is altered
-		//bd($value, 'value at start of process input');
-		// $value->targetSanitized = null;
+		try {
+			$name = $this->attr('name');
+			$value = $this->attr('value');
+			$old = clone $value; // Don't want $old to change when $value is altered
+			//bd($value, 'value at start of process input');
+			// $value->targetSanitized = null;
 
-		$input_names = array(
-			'magnitude' => "{$name}_magnitude",
-			'unit' => "{$name}_unit",
-			'quantity' => "{$name}_quantity",
-			'update' => "{$name}_update"
-		);
+			$input_names = array(
+				'magnitude' => "{$name}_magnitude",
+				'unit' => "{$name}_unit",
+				'quantity' => "{$name}_quantity",
+				'update' => "{$name}_update"
+			);
 
-		// loop inputs and set them if changed
-        foreach($input_names as $key => $name) {
-        	//bd(['input name' => $input->$name, 'value->key' => $value->key], 'input name etc');
-            if(isset($input->$name) && $value->$key != $input->$name) {
-            	if($key == 'magnitude') {
-					$input->$name = trim($input->$name);
-            		if(!is_numeric($input->$name)) {
-						$magnitude = explode('|', $input->$name);
-						$magnitude = array_filter($magnitude, 'is_numeric');
-						$value->set($key, $magnitude);
+			// loop inputs and set them if changed
+			foreach($input_names as $key => $name) {
+				//bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc');
+				if(isset($input->$name) && $value->get($key) != $input->$name) {
+					if($key == 'magnitude') {
+						$input->$name = trim($input->$name);
+
+						/*
+						 * Set the regex for the required pattern for the magnitude field
+						 */
+						//The relevant unit to use for formatting depends on whether we are updating...
+						//bd($input[$input_names['update']], 'input names - update');
+						if($input[$input_names['update']]) {
+							$unit = $value->get('unit');
+							$update = true;
+						} else {
+							$update = false;
+							$unit = $input[$input_names['unit']];
+						}
+						// Now we know how many elements there should be to be separated by pipes
+						$unitArray = explode('|', $unit);
+						$unitCount = count($unitArray);
+						// Set the pattern...
+						$decimalPattern = "[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?";  // matches scientific notation as well as decimal
+						$re = '/^';
+						for($i = 0; $i < $unitCount; $i++) {
+							if($i > 0) $re .= '\|';
+							$re .= $decimalPattern;
+						}
+						$re .= '$/';
+						// ... and check the pattern
+						$msg = $this->_("Change not made - magnitude not in correct format.");
+						$msg .= "\n";
+						$msg .= ($update) ? $this->_("When converting measurements, leave the magnitude in the correct format for the previous units.") :
+							$this->_("Did you mean to convert the value? If so, tick the 'convert' box.");
+						if(!preg_match($re, $input->$name)) throw new MeasurementException($msg);
+						// If OK, carry on!
+
+						if(!is_numeric($input->$name)) {
+							$magnitude = explode('|', $input->$name);
+							$magnitude = array_filter($magnitude, 'is_numeric');
+							$value->set($key, $magnitude);
+						} else {
+							$value->set($key, [$input->$name]);
+						}
 					} else {
-						$value->set($key, [$input->$name]);
+						$value->set($key, $input->$name);
 					}
-				} else {
-					$value->set($key, $input->$name);
+					$this->trackChange('value');
 				}
-                $this->trackChange('value');
-            }
-        }
-
-        $new = $value;
-		//bd(['old' => $old, 'new' => $new], 'changes to field');
-		$oldUnit = $old->get('unit');
-		$newUnit = $new->get('unit');
-
-		//bd($value->get('magnitude'), 'Magnitude');
-		//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
-		//bd($value->get('update'), 'update?');
-		if($oldUnit and $newUnit and  $oldUnit != $newUnit and $value->get('update') == 1) {
-			//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
-			// Check consistency of units and magnitude
-			if(count($value->get('magnitude')) != count((explode('|', $oldUnit)))) {
-				throw new ConvertorException("Magnitude not consistent with original unit");
 			}
-			$value->set('unit', $oldUnit);
-			$value->convertTo($newUnit);
-		} else {
-			//bd('No change');
-			if($value->get('unit')) {
+
+			$new = $value;
+			//bd(['old' => $old, 'new' => $new], 'changes to field');
+			$oldUnit = $old->get('unit');
+			$newUnit = $new->get('unit');
+
+			//bd($value->get('magnitude'), 'Magnitude');
+			//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
+			//bd($value->get('update'), 'update?');
+			if($oldUnit and $newUnit and $oldUnit != $newUnit and $value->get('update') == 1) {
+				//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
 				// Check consistency of units and magnitude
-				//bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $newUnit)))], 'count compare');
-				if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
-					throw new ConvertorException("Magnitude not consistent with chosen unit");
+				if(count($value->get('magnitude')) != count((explode('|', $oldUnit)))) {
+					// In theory, this should never happen as the input has already been checked
+					throw new MeasurementException($this->_("Magnitude not consistent with original unit"));
+				}
+				$value->set('unit', $oldUnit);
+				$value->convertTo($newUnit);
+			} else {
+				//bd('No change');
+				if($value->get('unit')) {
+					// Check consistency of units and magnitude
+					//bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $newUnit)))], 'count compare');
+					if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
+						// In theory, this should never happen as the input has already been checked
+						throw new MeasurementException($this->_("Magnitude not consistent with chosen unit"));
+					}
 				}
 			}
+			//bd($value, 'value at end of process_input');
+			//bd($this, 'this at end of process_input');
+
+
+
+		} catch(MeasurementException $e) {
+			$this->error($e->getMessage());
 		}
-		//bd($value, 'value at end of process_input');
-		//bd($this, 'this at end of process_input');
-        return $this;
+		return $this;
     }
 
 	public function ___getConfigInputfields() {

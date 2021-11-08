@@ -1,7 +1,8 @@
-<?php namespace ProcessWIre;
+<?php namespace ProcessWire;
 
 return array(
 ///////Units Of Mass///////
+	"dimension" => new MeasurementDimension(MeasurementDimension::MASS, 1),
 	'base' => 'kilogram',
 	'units' => array(
 		"kilogram" => array("shortLabel" => "kg", "conversion" => 1), //kilogram - base unit for mass
@@ -17,5 +18,24 @@ return array(
 		"short ton" => array("shortLabel" => "sht ton", "conversion" => 907.1847),
 		"US ton" => array("shortLabel" => "US ton", "conversion" => 907.1847),
 		"grain" => array("shortLabel" => "gn", "conversion" => 0.00006479891),
+		"stone|pound" => array(            // pipe join is required
+			"shortLabel" => "st|lb",
+			"conversion" => function($val, $tofrom) {
+				// value is an array for combi-type units
+				if($tofrom) {
+					// $val is the base unit magnitude - so return an array
+					$convert = $val / 6.35029;
+					$st = intval($convert);
+					$lb = ($convert - $st) * 14;
+					return [$st, $lb];
+				} else {
+					// $val is an array [st, lb] - so return a single value for the base unit
+					$st = $val[0] + ($val[1] / 14);
+					return $st * 6.35029;
+				}
+			},
+			"join" => [" "],
+			"plural" => "feet|inches"
+		)
 	)
 );

@@ -1,7 +1,8 @@
-<?php namespace ProcessWIre;
+<?php namespace ProcessWire;
 
 return array(
 ///////Units Of Temperature///////
+	"dimension" => new MeasurementDimension(MeasurementDimension::TEMPERATURE, 1),
 	'base' => 'Kelvin',
 	'units' => array(
 		"Kelvin" => array("shortLabel" => "K", "conversion" => 1, "plural" => "Kelvin"), //Kelvin - base unit for temperature

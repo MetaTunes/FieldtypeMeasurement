@@ -8,14 +8,16 @@
  *
  * @author Mark Evens
  * @license Licensed under GNU/GPL v3
- * @link http://processwire.com/talk
+ * @link https://processwire.com/talk/topic/26241-fieldtypemeasurement/
  *
  * ProcessWire 2.x, 3.x
  * Copyright (C) 2016 by Ryan Cramer
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  *
  * http://processwire.com
- * @version 0.0.4
+ *
+ * @version 0.0.5
+ * @since 0.0.4 allowed specific formats in config file, additional units, dimensional analysis supported
  * @since 0.0.3 added static function addMeasurement(), altered add() and subtract() methods to Measurement, bug fixes
  * @since 0.0.2 revised db schema to hold base unit value
  * @since 0.0.1 minor mods
@@ -28,9 +30,13 @@
  * @property string $quantity The physical quantity to be measured
  * @property string $units The units to be presented as options
  *
+ *  * ERROR STRINGS
+ * @property string $invalidUnits
+ *
  */
 
 class FieldtypeMeasurement extends Fieldtype {
+
 
 	/**
 	 * Construct the Fieldtype and populate default settings and column types
@@ -39,13 +45,14 @@ class FieldtypeMeasurement extends Fieldtype {
 	public function __construct() {
 		parent::__construct();
 		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/Measurement.php');
+		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/MeasurementDimension.php');
 	}
 
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.4',
+			'version' => '0.0.5',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
@@ -57,6 +64,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	 *
 	 */
 	public function init() {
+		$this->invalidUnits = __('This unit is not valid for the quantity type of this field. Resetting value to zero.');
 		parent::init();
 	}
 
@@ -77,6 +85,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	 * @param Field $field
 	 * @return Inputfield
 	 *
+	 * @throws WireException
 	 */
 	public function getInputfield(Page $page, Field $field) {
 		$inputfield = $this->wire('modules')->get('InputfieldMeasurement');
@@ -85,14 +94,14 @@ class FieldtypeMeasurement extends Fieldtype {
 	}
 
 	/**
-	 * nothing compatible
+	 * nothing compatible?
 	 *
+	 * @throws WireException
 	 */
 	public function ___getCompatibleFieldtypes(Field $field) {
-		//return null;
 		$fieldtypes = $this->wire(new Fieldtypes());
 		foreach($this->wire('fieldtypes') as $fieldtype) {
-			if($fieldtype instanceof FieldtypeButton) {
+			if($fieldtype instanceof self) {
 				$fieldtypes->add($fieldtype);
 			}
 		}
@@ -107,6 +116,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	 * @param string|int|array $value
 	 * @return string|int|array|object $value
 	 *
+	 * @throws WireException
 	 */
 	public function ___wakeupValue(Page $page, Field $field, $value) {
 
@@ -121,31 +131,56 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		// create new Measurement object
 		//bd($measurement, 'measurement0 in ___wakeupValue');
-
-
-//		$measurement->magnitude = isset($value['data']) ? explode('|', $value['data']) : []; // value as measured in the specified units
+//bd($value['data'], 'data in wakeupvalue');
 		$measurement->quantity = $value['quantity'];
+		if(!in_array($measurement->quantity, Measurement::getQuantities())) {
+			$this->error(sprintf($this->_(
+				'Quantity (%s) in database has no Config file'),
+				$measurement->quantity));
+			return $measurement;
+		}
+		$measurement->baseMagnitude = $value['data'];
+		$measurement->dimension = Measurement::getDimension($measurement->quantity);
 		if($value['unit']) {
 			$measurement->unit = $value['unit'];
-			$measurement->magnitude = $measurement->valueFromBase($value['data'], $value['unit']);
+			$units = Measurement::getUnits($measurement->quantity);
+			//bd($units);
+			if(array_key_exists($value['unit'], $units) && isset($value['magnitude'])) {
+				$measurement->magnitude = explode('|', $value['magnitude']); // $measurement->valueFromBase($value['data'], $value['unit']);
+			} else {
+				$measurement->magnitude = $measurement->baseMagnitude;
+				$measurement->unit = Measurement::getBaseUnit($measurement->quantity);
+				$this->error(sprintf($this->_(
+					'The previously saved unit (%1$s) is not (or no longer) compatible with this quantity (%2$s). Perhaps a changed config file? Value is shown as base units.'),
+					$value['unit'], $measurement->quantity) . ($this->_("\nThe best way to fix this may be to save the base unit value shown and then convert to the required unit.")));
+			}
 		} else {
-			$measurement->unit = self::getBaseUnit($measurement->quantity);
-			$measurement->magnitude = 0;
+			$measurement->unit = Measurement::getBaseUnit($measurement->quantity);
+			$measurement->magnitude = $measurement->baseMagnitude;
+			$this->error($this->_(
+				'Unit is not known. Value is shown as base units. Please amend as appropriate.'));
 		}
 		if(!is_array($measurement->magnitude)) $measurement->magnitude = [$measurement->magnitude];
 
 		//bd($measurement, 'measurement1 in ___wakeupValue');
 		// get the current shortLabel and plural from the config file - not a saved version
 		if($measurement->unit and $measurement->quantity) {
-			$units = FieldtypeMeasurement::getUnits($measurement->quantity);
-			if(isset($units[$measurement->unit]['shortLabel'])) {
-				$measurement->shortLabel = $units[$measurement->unit]['shortLabel'];
+			$units = Measurement::getUnits($measurement->quantity);
+
+				foreach($units[$measurement->unit] as $key => $item) {
+					if($key == 'conversion') continue;
+					if(isset($units[$measurement->unit][$key])) {
+						$measurement->set($key, $item);
+					} else {
+						if($measurement->get($key)) $measurement->remove($key);
+					}
+
+				}
+
+			if($this->unit and !is_null($this->magnitude)) {
+				$this->convertFrom($this->magnitude, $this->unit);
 			}
-			if(isset($units[$measurement->unit]['plural'])) {
-				$measurement->plural = $units[$measurement->unit]['plural'];
-			} else {
-				if(isset($measurement->plural)) unset($measurement->plural);
-			}
+
 		}
 		// $measurement->resetTrackChanges();
 		//bd($measurement, 'measurement2 in ___wakeupValue');
@@ -164,7 +199,8 @@ class FieldtypeMeasurement extends Fieldtype {
 		//bd($field, 'field in getBlankValue');
 		//bd($field->quantity, 'quantity in getBlankValue');
 		if ($field->quantity) $measurement->set('quantity', $field->quantity);
-		if ($field->units) $measurement->set('units', $field->units);
+		//ToDo - check that it is OK to delete the following
+//		if ($field->units) $measurement->set('units', $field->units);
 		$measurement->set('magnitude', []);
 		$measurement->set('shortLabel', null);
 		$measurement->set('plural', null);
@@ -178,7 +214,6 @@ class FieldtypeMeasurement extends Fieldtype {
 	 *
 	 * @param Page $page
 	 * @param Field $field
-	 * @param Button object $value
 	 * @return array
 	 *
 	 */
@@ -192,14 +227,19 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		//bd($value);
 		if($value->get('unit')) {
+			// Use up-to-date conversion to save base magnitude, if we have a unit
+			//bd($value->valueAsBase());
 			$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
+		} else if($value->get('baseMagnitude')) {
+			$data = $value->get('baseMagnitude');
 		} else {
 			$data = 0;
 		}
-		//bd($data);
+		//bd($data, 'data in ___sleepValue');
+		$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
 		$sleepValue = array(
-//			'data' => implode('|', $value->get('magnitude')),
 			'data' => $data,
+			'magnitude' => $magnitude,
 			'unit' => $value->get('unit'),
 			'quantity' => $value->get('quantity')
 		);
@@ -210,6 +250,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	/**
 	 * Given a value, make it clean for storage within a Page
 	 *
+	 * @throws WireException
 	 */
 	public function sanitizeValue(Page $page, Field $field, $value) {
 
@@ -218,7 +259,7 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		// if given something other than a Measurement object, throw an error
 		if(!$value instanceof Measurement) {
-			throw new WireException("Value set to field '$field->name' must be a Measurement object");
+			throw new WireException(sprintf($this->_('Value set to field %s must be a Measurement object'), $field->name));
 		}
 
 		// note that sanitization of individual fields within a given event is already
@@ -235,7 +276,8 @@ class FieldtypeMeasurement extends Fieldtype {
 
 		$schema = parent::getDatabaseSchema($field);
 
-		$schema['data'] = 'decimal NOT NULL';
+		$schema['data'] = 'double NOT NULL';  // value in base units
+		$schema['magnitude'] = 'varchar(64)'; // value in current units - needs to be text to store composite values
 		$schema['unit'] = 'text NOT NULL';
 		$schema['quantity'] = 'text NOT NULL';
 
@@ -246,12 +288,14 @@ class FieldtypeMeasurement extends Fieldtype {
 	/**
 	 * Method called when the field is database-queried from a selector
 	 *
+	 * @throws WireException
 	 */
 	public function getMatchQuery($query, $table, $subfield, $operator, $value) {
 		// If searching 'magnitude' then assume our default (data) field
-		if($subfield == 'magnitude') $subfield = 'data';
+		if($subfield == 'baseMagnitude') $subfield = 'data';
 		return parent::getMatchQuery($query, $table, $subfield, $operator, $value);
 	}
+
 
 	/**
 	 * Get any inputfields used for configuration of this Fieldtype.
@@ -261,13 +305,14 @@ class FieldtypeMeasurement extends Fieldtype {
 	 * @param Field $field
 	 * @return InputfieldWrapper
 	 *
+	 * @throws WirePermissionException
 	 */
 	public function ___getConfigInputfields(Field $field) {
 
 		$inputfields = parent::___getConfigInputfields($field);
 
 		$f = $this->modules->get("InputfieldSelect");
-		$quantities = $this->getQuantities();
+		$quantities = Measurement::getQuantities();
 		$f->label = __("Quantity");
 		$f_name = 'quantity';
 		$f->name = $f_name;
@@ -287,85 +332,52 @@ class FieldtypeMeasurement extends Fieldtype {
 		$f->columnWidth = 50;
 		$inputfields->append($f);
 
-		$f = $this->modules->get('InputfieldAsmSelect');
-		$f_name = 'units';
-		$f->name = $f_name;
-		$f->label = __('Select the units you want to appear as options for this field.');
-		$f->columnWidth = 50;
 		$quantity = $field->get('quantity');
-		$units = ($quantity) ? self::getUnits($quantity) : [];
-		foreach($units as $key => $unit) {
-			$shortLabel = $unit['shortLabel'];
-			$f->addOption($key, "$key ($shortLabel)");
-		}
-		$f->value = $field->get('units');
-		$inputfields->append($f);
+		$units = ($quantity) ? Measurement::getUnits($quantity) : [];
+		if($quantity) {
 
-		$f = $this->modules->get('InputfieldCheckbox');
-		$f->attr('name', 'show_update');
-		$f->label = __('Show an update checkbox');
-		$f->notes = __("If the update box in the input field is checked, any changes to the units will automatically convert the magnitude.");
-		$f->attr('checked', $field->show_update ? 'checked' : '' );
-		$f->columnWidth = 50;
-		$inputfields->append($f);
+			$notes = '<p>' . Measurement::getQuantityNotes($quantity) . '</p>';
+			foreach($units as $key => $unit) {
+				//bd($unit);
+				$extraNotes = isset($unit['notes']) ? "<h4>{$key}</h4><p>{$unit['notes']}</p>" : null;
+				$notes .= $extraNotes;
+			}
+
+			if($notes) {
+				$f = $this->modules->get('InputfieldMarkup');
+				$f->attr('name', 'notes');
+				$f->label = __("Notes about $quantity");
+				$f->value = $notes;
+				$f->collapsed = Inputfield::collapsedYes;
+				$inputfields->append($f);
+			}
+
+			$f = $this->modules->get('InputfieldAsmSelect');
+			$f_name = 'units';
+			$f->name = $f_name;
+			$f->label = __('Select the units you want to appear as options for this field.');
+			$f->columnWidth = 50;
+			$quantity = $field->get('quantity');
+			foreach($units as $key => $unit) {
+				$shortLabel = $unit['shortLabel'];
+				if($shortLabel) $shortLabel = "($shortLabel)";
+				$alias = (isset($unit['alias']) && $unit['alias']) ? $unit['alias'] : $key;
+				$f->addOption($key, "$alias $shortLabel");
+			}
+			$f->value = $field->get('units');
+			$inputfields->append($f);
+
+			$f = $this->modules->get('InputfieldCheckbox');
+			$f->attr('name', 'show_update');
+			$f->label = __('Show an update checkbox');
+			$f->notes = __("If the update box in the input field is checked, any changes to the units will automatically convert the magnitude.");
+			$f->attr('checked', $field->show_update ? 'checked' : '');
+			$f->columnWidth = 50;
+			$inputfields->append($f);
+		}
 
 		return $inputfields;
 	}
 
-	public function getQuantities() {
-		$configPath =  __DIR__ . '/Config/';
-		$configFiles = $this->wire()->files->find($configPath);
-		$userPath =  wire()->config->paths->templates . 'Measurement/';
-		$userFiles = $this->wire()->files->find($userPath);
-		$allFiles = array_merge($configFiles, $userFiles);
-		$quantities = [];
-		foreach($allFiles as $file) {
-			$quantities[] = basename($file, '.php');
-		}
-		return array_unique($quantities);
-	}
-
-	public static function getUnits($quantity) {
-		//bd(debug_backtrace(), 'getUnits' . $quantity);
-		$unitsFile = self::configFile($quantity);
-		if(!file_exists($unitsFile)) return;
-		$conversions = include $unitsFile;
-		$units = $conversions['units'];
-		return $units;
-	}
-
-	public static function getBaseUnit($quantity) {
-		//bd(debug_backtrace(), 'getUnits' . $quantity);
-		$unitsFile = self::configFile($quantity);
-		if(!file_exists($unitsFile)) return;
-		$conversions = include $unitsFile;
-		$base = $conversions['base'];
-		return $base;
-	}
-
-	public static function configFile($quantity) {
-		$configFile = __DIR__ . '/Config/' . $quantity . '.php';
-		$userFile = wire()->config->paths->templates . 'Measurement/' . $quantity . '.php';
-		if(file_exists($userFile)) {
-			$unitsFile = $userFile;
-		} else {
-			$unitsFile = $configFile;
-		}
-		return $unitsFile;
-	}
-
-	public static function sumMeasurements(...$measurements) {
-		if(is_array($measurements[0])) $measurements = $measurements[0];
-		if(!is_a($measurements[0], 'ProcessWire\Measurement')) return 0;
-		$quantity = $measurements[0]->quantity;
-		$baseUnit = self::getBaseUnit($quantity);
-		$sum = new Measurement($quantity, $baseUnit, 0);
-		foreach($measurements as $measurement) {
-			if(is_a($measurements[0], 'ProcessWire\Measurement')) {
-				$sum->add($measurement);
-			}
-		}
-		return $sum;
-	}
 
 }

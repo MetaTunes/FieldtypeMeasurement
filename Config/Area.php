@@ -1,7 +1,8 @@
-<?php namespace ProcessWIre;
+<?php namespace ProcessWire;
 
 return array(
 ///////Units Of Area///////
+	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH ** 2, 1),
 	'base' => 'square metre',
 	'units' => array(
 		"square metre" => array("shortLabel" => "m^2", "conversion" => 1), //square metre - base unit for area

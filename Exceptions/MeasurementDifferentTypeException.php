@@ -2,7 +2,7 @@
 
 use \Throwable;
 
-class FileNotFoundException extends WireException
+class MeasurementDifferentTypeException extends WireException
 {
     public function __construct($message = "", $code = 0, Throwable $previous = null)
     {

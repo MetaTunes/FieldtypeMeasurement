@@ -1,7 +1,10 @@
 <?php namespace Processwire;
 
+
 return array(
 	///////Units Of Length///////
+	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH, 1),
+	"notes" => "The base unit for Length is the metre, which is an SI unit defined as the length of the path travelled by light in a vacuum in 1/299792458 of a second.",
 	"base" => 'metre',
 	"units" => array(
 		"metre" => array("shortLabel" => "m", "conversion" => 1), //metre - base unit for distance
@@ -15,6 +18,7 @@ return array(
 		"inch" => array("shortLabel" => "in", "conversion" => 0.0254, "plural" => "inches"),
 		"foot" => array("shortLabel" => "ft", "conversion" => 0.3048, "plural" => "feet"),
 		"yard" => array("shortLabel" => "yd", "conversion" => 0.9144),
+		"furlong" => array("shortLabel" => "Fur", "conversion" => 201.168),
 		"mile" => array("shortLabel" => "mi", "conversion" => 1609.344),
 		"hand" => array("shortLabel" => "h", "conversion" => 0.1016),
 		"light-year" => array("shortLabel" => "ly", "conversion" => 9460730472580800),
@@ -36,6 +40,7 @@ return array(
 					return $ft * 0.3048;
 				}
 			},
+			"join" => [" "],
 			"plural" => "feet|inches"
 		)
 	)

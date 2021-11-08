@@ -2,9 +2,9 @@
 
 use InvalidArgumentException;
 use PHPMailer\PHPMailer\Exception;
-use ProcessWire\ConvertorException;
+use ProcessWire\MeasurementException;
 
-final class ConversionDefinition
+class ConversionDefinition extends WireData
 {
     /** @var string */
     private $unit;
@@ -15,19 +15,20 @@ final class ConversionDefinition
     /** @var float|Callable */
     private $conversion;
 
-    /**
-     * @param string $unit
-     * @param string $baseUnit
-     * @param float|Callable $conversion
-     */
-    public function __construct(string $unit, string $baseUnit, string $shortLabel, $conversion)
+	/**
+	 * @param string $unit
+	 * @param string $baseUnit
+	 * @param float|Callable $conversion
+	 * @throws \ProcessWire\MeasurementException
+	 */
+    public function __construct(string $unit, string $baseUnit, $conversion)
     {
         $this->unit = $unit;
         $this->baseUnit = $baseUnit;
         $this->conversion = $conversion;
 
         if (! is_numeric($conversion) && ! is_callable($conversion)) {
-            throw new ConvertorException('A conversion must be either numeric or a callable.');
+            throw new MeasurementException($this->_("A conversion must be either numeric or a callable."));
         }
     }
 
@@ -46,9 +47,14 @@ final class ConversionDefinition
         return $this->unit === $this->baseUnit;
     }
 
-    public function convertToBase($value): float  // $value can be an array for combi units
+	/**
+	 * @throws \ProcessWire\MeasurementException
+	 */
+	public function convertToBase($value): float  // $value can be an array for combi units
     {
-    	//bd($this->conversion);
+//		$value = (float) $value;
+    	//bd([$this->conversion, $value]);
+		//bd(debug_backtrace());
         if (is_numeric($this->conversion)) {
             return $value * $this->conversion;
         } elseif (is_callable($this->conversion)) {
@@ -56,14 +62,17 @@ final class ConversionDefinition
 				$converter = $this->conversion;
 			}
 			catch(Exception $e) {
-				throw new ConvertorException('The conversion callback function cannot be executed. Perhaps an input error?');
+				throw new MeasurementException($this->_("The conversion callback function cannot be executed. Perhaps an input error?"));
 			}
             return $converter($value, false);
         }
-        throw new ConvertorException('The conversion must be either numeric or callable.');
+        throw new MeasurementException($this->_("The conversion must be either numeric or callable."));
     }
 
-    public function convertFromBase(float $value)
+	/**
+	 * @throws \ProcessWire\MeasurementException
+	 */
+	public function convertFromBase(float $value)
     {
         if (is_numeric($this->conversion)) {
             return $value / $this->conversion;
@@ -72,10 +81,10 @@ final class ConversionDefinition
 				$converter = $this->conversion;
 			}
 			catch(Exception $e) {
-				throw new ConvertorException('The conversion callback function cannot be executed. Perhaps an input error?');
+				throw new MeasurementException($this->_("The conversion callback function cannot be executed. Perhaps an input error?"));
 			}
             return $converter($value, true); // $value can be an array for combi units
         }
-        throw new ConvertorException('The conversion must be either numeric or callable.');
+        throw new MeasurementException($this->_("The conversion must be either numeric or callable."));
     }
 }

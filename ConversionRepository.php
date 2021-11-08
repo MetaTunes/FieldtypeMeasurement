@@ -1,107 +1,121 @@
 <?php namespace ProcessWire;
 
 use InvalidArgumentException;
-use ProcessWire\ConvertorException;
-use ProcessWire\ConvertorInvalidUnitException;
+use ProcessWire\MeasurementException;
+use ProcessWire\MeasurementInvalidUnitException;
 use ProcessWire\FileNotFoundException;
 
-final class ConversionRepository
-{
-    /** @var array<string, ConversionDefinition> */
-    private $definitions = [];
+class ConversionRepository extends WireData {
 
-    private function __construct(ConversionDefinition ...$definitions) {
-        foreach ($definitions as $definition) {
+
+	/** @var array<string, ConversionDefinition> */
+	private $definitions = [];
+
+	private function __construct(string $quantity, ConversionDefinition ...$definitions) {
+		$this->quantity = $quantity;
+		foreach($definitions as $definition) {
 //        	$definition['base'] = $base;
-            $this->definitions[$definition->getUnit()] = $definition;
-        }
-        //bd(debug_backtrace());
-        //bd($this, 'new repository');
-//		throw new InvalidArgumentException('Constructed ');
-    }
+			$this->definitions[$definition->getUnit()] = $definition;
+		}
+	}
 
-    public static function fromFile(string $path): ConversionRepository
-    {
-        if(!file_exists($path)) {
-            throw new FileNotFoundException("File could not be found. Given path='$path'" .
-                "either use the name of one of the pre defined configuration files or pass the complete path to the file.");
-        }
+	/**
+	 * @throws \ProcessWire\MeasurementException
+	 * @throws \ProcessWire\FileNotFoundException
+	 */
+	public static function fromFile(string $path): ConversionRepository {
+		if(!file_exists($path)) {
+			throw new FileNotFoundException(sprintf(__('File could not be found. Given path=%s. 
+            Either use the name of one of the pre defined configuration files or pass the complete path to the file.'), $path));
+		}
+		$quantity = basename($path, '.php');
 
-        $data = include $path;
+		$data = include $path;
 
-        if(!is_array($data)) {
-            throw new InvalidArgumentException('The Unit definition must be an array.');
-        }
+		if(!is_array($data)) {
+			throw new InvalidArgumentException(__("The Unit definition must be an array."));
+		}
 		$base = $data['base'];
-        $list = array_map(function ($key, $definition) use ($base) {
-            if (! isset($definition['shortLabel']) || ! isset($definition['conversion'])) {
-                throw new InvalidArgumentException('A conversion definition must have a shortLabel and conversion property.');
-            }
-            return new ConversionDefinition($key, $base, $definition['shortLabel'], $definition['conversion']);
-        }, array_keys($data['units']), $data['units']);
-       //bd($list, 'list');
+		$units = (wire()->session->get($quantity)) ?: [];
+		$units = array_merge($data['units'], $units);
+		$list = array_map(function($key, $definition) use ($base) {
+			if(!isset($definition['shortLabel']) || !isset($definition['conversion'])) {
+				throw new InvalidArgumentException(__("A conversion definition must have a shortLabel and conversion property."));
+			}
+			return new ConversionDefinition($key, $base, $definition['conversion']);
+		}, array_keys($units), $units);
+		//bd($list, 'list');
 
-        return new ConversionRepository(...$list);
-    }
 
-    public function getConversion(string $unit): ConversionDefinition
-    {
-        if (! $this->unitExists($unit)) {
-            throw new ConvertorInvalidUnitException("Unit {$unit} is not defined.");
-        }
+		return new ConversionRepository($quantity, ...$list);
+	}
 
-        return $this->definitions[$unit];
-    }
+	/**
+	 * @throws \ProcessWire\MeasurementException
+	 * @throws \ProcessWire\MeasurementInvalidUnitException
+	 */
+	public function addConversion(ConversionDefinition $definition): void {
+		if($this->unitExists($definition->getUnit())) {
+			throw new MeasurementInvalidUnitException(sprintf($this->_('Unit %s is already defined.'), $definition->getUnit()));
+		}
 
-    public function unitExists(string $unit): bool
-    {
-        return array_key_exists($unit, $this->definitions);
-    }
+		if(!$this->unitExists($definition->getBaseUnit()) && $definition->isBaseUnit()) {
+			throw new MeasurementException($this->_("Base Unit Does Not Exist"));
+		}
 
-    public function getAvailableConversions(string $unit): array
-    {
-        $conversion = $this->getConversion($unit);
+		$this->definitions[$definition->getUnit()] = $definition;
+	}
 
-        $unitConversions = array_filter($this->definitions, function(ConversionDefinition  $definition) use ($conversion) {
-            return $conversion->getBaseUnit() === $definition->getBaseUnit();
-        });
+	public function unitExists(string $unit): bool {
+		return array_key_exists($unit, $this->definitions);
+	}
 
-        return array_map(function (ConversionDefinition $definition) {
-            return $definition->getUnit();
-        }, $unitConversions);
-    }
+	/**
+	 * @throws \ProcessWire\MeasurementInvalidUnitException
+	 */
+	public function removeConversion(string $unit): void {
+		$conversion = $this->getConversion($unit);
 
-    public function addConversion(ConversionDefinition $definition): void
-    {
-        if ($this->unitExists($definition->getUnit())) {
-            throw new ConvertorInvalidUnitException("Unit {$definition->getUnit()} is already defined.");
-        }
+		if(!$conversion->isBaseUnit()) {
+			unset($this->definitions[$unit]);
+			return;
+		}
 
-        if (! $this->unitExists($definition->getBaseUnit()) && $definition->isBaseUnit()) {
-            throw new ConvertorException("Base Unit Does Not Exist");
-        }
+		// Unit is a base-unit. Remove all related units first.
+		foreach($this->getAvailableConversions($unit) as $relatedUnit) {
+			if($unit === $relatedUnit) {
+				continue;
+			}
 
-        $this->definitions[$definition->getUnit()] = $definition;
-    }
+			$this->removeConversion($relatedUnit);
+		}
 
-    public function removeConversion(string $unit): void
-    {
-        $conversion = $this->getConversion($unit);
+		unset($this->definitions[$unit]);
+	}
 
-        if (! $conversion->isBaseUnit()) {
-            unset($this->definitions[$unit]);
-            return;
-        }
+	/**
+	 * @throws \ProcessWire\MeasurementInvalidUnitException
+	 */
+	public function getConversion(string $unit): ConversionDefinition {
+		if(!$this->unitExists($unit)) {
+			throw new MeasurementInvalidUnitException(sprintf(__('Unit %1$s is not defined for quantity %2$s.'), $unit, $this->quantity));
+		}
 
-        // Unit is a base-unit. Remove all related units first.
-        foreach ($this->getAvailableConversions($unit) as $relatedUnit) {
-            if ($unit === $relatedUnit) {
-                continue;
-            }
+		return $this->definitions[$unit];
+	}
 
-            $this->removeConversion($relatedUnit);
-        }
+	/**
+	 * @throws \ProcessWire\MeasurementInvalidUnitException
+	 */
+	public function getAvailableConversions(string $unit): array {
+		$conversion = $this->getConversion($unit);
 
-        unset($this->definitions[$unit]);
-    }
+		$unitConversions = array_filter($this->definitions, function(ConversionDefinition $definition) use ($conversion) {
+			return $conversion->getBaseUnit() === $definition->getBaseUnit();
+		});
+
+		return array_map(function(ConversionDefinition $definition) {
+			return $definition->getUnit();
+		}, $unitConversions);
+	}
 }
