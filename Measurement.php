@@ -92,13 +92,13 @@ class Measurement extends BaseMeasurement
 			parent::__construct($baseMagnitude, $dimension);
 		}
 		//bd($this, 'In Construct - 3 set');
-//		if($this->get('unit') and $this->get('quantity')) {
-//			$units = self::getUnits($this->get('quantity'));
-//			foreach($units[$unit] as $key => $item) {
-//				if($key == 'conversion') continue;
-//				$this->set($key, $item);
-//			}
-//		}
+		if($this->get('unit') and $this->get('quantity')) {
+			$units = self::getUnits($this->get('quantity'));
+			foreach($units[$unit] as $key => $item) {
+				if($key == 'conversion') continue;
+				$this->set($key, $item);
+			}
+		}
 //        if($this->unit and !is_null($this->magnitude)) {
 //            try {
 //				$this->convertFrom($this->magnitude, $this->unit);
@@ -134,7 +134,7 @@ class Measurement extends BaseMeasurement
     public function convertFrom($value, ?string $unit = null): Measurement
     {
     	//bd($this, 'this in from');
-        if (! $unit) {
+        if (!$unit) {
             $this->magnitude = $value;
             return $this;
         }
