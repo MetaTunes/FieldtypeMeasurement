@@ -1,9 +1,9 @@
-<?php namespace ProcessWire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Density///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::MASS, MeasurementDimension::LENGTH ** 3),
+	"dimension" => new Dimension([Dimension::MASS => 1, Dimension::LENGTH => -3]),
 	"notes" => __("The base unit for density is the kilogram per cubic metre, which is the same as 'gram per litre' - which is more useful in many practical circumstances."),
 	'base' => 'kilogram per cubic metre',
 	'units' => array(

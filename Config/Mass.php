@@ -1,8 +1,9 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Mass///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::MASS, 1),
+	"dimension" => new Dimension([Dimension::MASS => 1]),
 	'base' => 'kilogram',
 	'units' => array(
 		"kilogram" => array("shortLabel" => "kg", "conversion" => 1), //kilogram - base unit for mass

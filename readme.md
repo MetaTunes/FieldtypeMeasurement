@@ -66,9 +66,10 @@ or by setting $page->of(false).
 The unformatted field is an object of class "Measurement" (which extends WireData). The main methods of this class are described below.
 
 ### Measurement methods
-The following methods are available for Measurement objects:
+The following methods are available for Measurement objects. (Note that, if you have the ProcessWireAPI module, you can access these very readily there).
 * *format(?array $options = [])*: Change the formatting used in subsequent rendering.
   The default options are:
+  
     ````
         $defaultOptions = [
             'label' => 'short', // 'short', 'shortPadded' (with space to separate from magnitude), 'long', 'none'
@@ -84,16 +85,16 @@ The following methods are available for Measurement objects:
     ````
    'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. 'position' determines the location of the shortLabel (before or after the magnitude). Long names will always be after the magnitude and preceded by a space. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
    'join' and 'skipNil' are only relevant for combination units - see below (note that 'join' is an array).
-
+  
     For plurals which are not achieved by adding an 's', the plural is given in the config file. Other options may be specified in the config file, in which case they will override the general defaults (but will in turn be overridden by any format($options)).
-
+  
     *Combination units*: The options above operate on each magnitude component successively. The 'join' elements are used to append each magnitude/label group. E.g.
     ````
   $page->length->format(['label' => 'long', 'decimals' => 1, 'join' => [' and ']]);
     ````
   results in something like: '1 foot and 3.4 inches'. Note that the number of elements in the join array is one less than the number of elements in the combination unit - i.e. there is no 'join' string after the last element (any excess elements will be ignored and  a shortfall will just result in concatenation). The 'skipNil' option, if true, will cause any leading elements to be suppressed - so '1 inch' not '0 feet 1 inch'. The last element will always be displayed. 
   
-* *render(?array $options = [])*: Render the measurement object. $options are as for format() above and will temporarily over-ride any previous setting by format().
+* *render(?array $options = [])*: Render the measurement using default or specified options. $options are as for format() above and will temporarily over-ride any previous setting by format().
 
 * *valueAs(string $unit, ?int $decimals = null, ?bool $round = true)*: Returns the magnitude converted to the specified unit (or an error if the specified unit does not exist or is not compatible).
   Rounds (or truncates) the value to the specified number of decimal places (if given).
@@ -104,9 +105,11 @@ The following methods are available for Measurement objects:
 
 * *valueAsMany(array $units, ?int $decimals = null, ?bool $round = true)*: Returns an array of all conversion values for units in the specified array.
 
-* *convertFrom($value, ?string $unit = null])*: Sets the magnitude to the value, converting from the specified compatible unit (if given) to the current unit of the measurement object. This method updates the current object.
+* *convertFrom($value, ?string $unit = null])*: Set the measurement from the given value & unit. If $value is a number: sets the magnitude to the value, converting from the specified compatible unit (if given) to the current unit of the measurement object. If $value is a Measurement object: converts the $value measurement to the units of the current object. This method updates the current object.
 
 * *convertFromBase($value)*: As for convertFrom() with $unit = the base unit.
+
+* *valueFromBase($value, $unit)*: Given a base unit magnitude $value, return the magnitude in the given $unit. If $unit is a combination unit, the result will be an array
 
 * *convertTo(string $unit, ?int $decimals = null, ?bool $round = true)*: Converts the object to one with the specified unit, carrying out the relevant conversion of the magnitude.
   Note that if the specified unit is not in the selectable options list, then blank will be displayed as an option; changing the field setup details to include the relevant option will cause it to display. This method updates the current object.
@@ -115,74 +118,66 @@ The following methods are available for Measurement objects:
 
 * *add(Measurement $measurement, ?string $unit = null)*: Add $measurement to this measurement. The result is in the units of this measurement unless $unit is specified ($measurement will be converted as appropriate). Returns a new Measurement object.
 
-* *sumOf(...$measurements)*: Adds the measurements (using *Measurement::sumMeasurements()* ). Updates the current object which must be of the same quantity as the measurements to be summed.
+* *sumOf(...$measurements)*: Adds the measurements. Updates the current object which must be of the same quantity as the measurements to be summed. Typically set ````$m = new Measurement($quantity);```` and then ````$m->sumOf(...);````
 
 * *subtract(Measurement $measurement, ?string $unit = null)*: Subtract $measurement from this measurement. The result is in the units of this measurement unless $unit is specified ($measurement will be converted as appropriate). Returns a new Measurement object.
 
-* *multiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: If $multiplier is a number then the measurement will simply be scaled. If $multiplier is a Measurement object then the result will be computed using dimensional analysis (both the current object and $measurement must be of quantities that have dimensions defined). If $quantity and $unit are not defined then they will be inferred as far as possible, otherwise they will be checked for consistency and the result will be returned as specified. See *Measurement::combineMeasurements()* for more details.
+* *multiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: If $multiplier is a number then the measurement will simply be scaled. If $multiplier is a Measurement object then the result will be computed using dimensional analysis (both the current object and $measurement must be of quantities that have dimensions defined). If $quantity and $unit are not defined then they will be inferred as far as possible, otherwise they will be checked for consistency and the result will be returned as specified.
 
-* *productOf(...$measurements)*: Multiplies the measurements using dimensional analysis (see *Measurement::combineMeasurements()* ) and updates the current object, which must have a quantity, dimension and units consistent with the intended product).
+* *productOf(...$measurements)*: Multiplies the measurements using dimensional analysis (see *multiplyBy()* ) and updates the current object, which must have a quantity, dimension and units consistent with the intended product.
 
 * *negate()*: Multiply by -1.
 
-* *power(int $exp, ?string $quantity = null, ?string $unit = null)*: Raise the measurement to the given power (positive or negative integer). This uses multiplyBy() or divideBy() the appropriate number of times to get the resulting measurement. If $exp is 0 it returns a dimensionless BaseMeasurement of magnitude 1.
+* *power(int $exp, ?string $quantity = null, ?string $unit = null)*: Raise the measurement to the given power (any real number).  If the result is has a dimension not matching any quantity, it returns a BaseMeasurement (dimensionless of magnitude 1 if $exp = 0).
 
-* *divideBy($divisor, ?string $quantity = null, ?string $unit = null)*: Analagous to multiplyBy() above.  See *Measurement::combineMeasurements()* for more details.
+* *divideBy($divisor, ?string $quantity = null, ?string $unit = null)*: Analogous to multiplyBy() above.
 
-* *invert(?string $quantity = null, ?string $unit = null)*: Divide a dimensionless unit by this measurement.  See *Measurement::combineMeasurements()* for more details.
+* *invert(?string $quantity = null, ?string $unit = null)*: Raise to the power -1. See *power()*.
 
 * *getConversions(?string $unit = null)*: Get all the compatible units for $unit - i.e. those which it can be converted to/from. If $unit is null, this is all the compatible units for the current unit of the measurement object.
   Returns an array ```['unit name1' => 'unit name1', 'unit name2' => 'unit name2', etc...]```.
 
-* *addUnit(string $unit, array $params, ?string $selectableIn = null)*: Add a new unit (compatible with the current one - i.e. measuring the same quantity) and conversion in memory. $params should be an array in the same format as the definition of a unit in the config file (see below). If you supply a field name (of FieldtypeMeasurement) as $selectableIn, then the new unit will be a selectable unit in that field. If the unit already exists, then the existing parameters will be removed and replaced by the specified conversion and options. To amend a unit without specifying all parameters, use amendUnit().
+* *addUnit(string $unit, array $params, ?string $selectableIn = null, ?string $template = null)*: Add a new unit (compatible with the current one - i.e. measuring the same quantity) and conversion in memory. $params should be an array in the same format as the definition of a unit in the config file (see below - but do NOT use anonymous functions). If you supply a field name (of FieldtypeMeasurement) as $selectableIn, then the new unit will be a selectable unit in that field (and if a template name is supplied in $template then the selectable unit will only be included in that template context).
+  If the unit already exists, then the existing parameters will be removed and replaced by the specified conversion and options. To amend a unit without specifying all parameters, use amendUnit().
   Returns true/false.
-
-* *amendUnit(string $unit, $conversion, array $options = [])* $conversion can be just a multiplier number or a callable function - see config files below for more details $options is the same format as in format(). Note that the amendment creates a temporary new unit which overrides the existing one - it is not added to the related file. To revert this amendment, you need to use removeUnit(). Returns true/false.
+  
+* *amendUnit(string $unit, $conversion, array $options = [])* Amend a unit definition in memory (which was added using addUnit() ). $conversion can be just a multiplier number or a callable function - see config files below for more details $options is the same format as in format(). Note that the amendment creates a temporary new unit which overrides the existing one - it is not added to the related file. To revert this amendment, you need to use removeUnit(). Returns true/false.
 
 * *removeUnit(string $unit)*: Remove a temporary unit - which had been added using addUnit() or amended using amendUnit() - from the session.
 
+* *getUnits()*: Returns the units which are compatible (from the config file) as an array.
+
 ### Other functions
-Various static functions are available in the Measurement class:
-* *Measurement::sumMeasurements(array $measurements, ?string $unit = null)*: Accepts an array of Measurement objects and optionally a unit in which to return the result. if $unit is not specified then the $measurements unit will be used if they are all in the same unit, otherwise the base unit will be used.
-
-* *Measurement::combineMeasurements(array $numerators, array $denominators, ?string $quantity = null, ?string $unit = null)* Accepts two arrays of Measurement (or BaseMeasurement) objects. The result is the product of the numerators divided by the denominators. All measurements must have a dimension - see notes on dimensions below.
-
-  If a quantity argument is supplied then the results are checked (using dimensional analysis) for consistency with the supplied quantity. If a unit argument is supplied, it is checked for consistency with the quantity (default is to use base units). If no quantity argument is supplied then the dimension of the result is used to find the first compatible quantity, returning the result in base units - the returned result is a Measurement object unless there are no compatible quantities in which case a 'BaseMeasurement' object is returned which just has the dimension and base magnitude.
-
-* *Measurement::configFile($quantity)* Returns the contents of the config file for the given quantity, as an array.
-
-* *Measurement::getUnits($quantity)* Returns the units in the config file for the given quantity, as an array.
-
-* *Measurement::getBaseUnit($quantity)* Returns the base unit for $quantity as a string.
-
-* *Measurement::addSelectableUnit($field, $unit)* Adds the specified unit (if compatible) to the selectable units for the field.
+* *FieldtypeMeasurement::addSelectableUnit(string $field, string $unit, ?string $template = null)* Adds the specified unit (if compatible) to the selectable units for the field (in the context of $template, if given).
+* *FieldtypeMeasurement::removeSelectableUnit(string $field, string $unit, ?string $template = null)* Removes the specified unit (if it exists) from the selectable units for the field (in the context of $template, if given).
 
 ### Dimensions
 
-If the relevant config file defines a dimension (see below) then a Measurement object will have a dimension attribute. This is an object (of class MeasurementDimension) with two data items : numerator and denominator.
+If the relevant config file defines a dimension (see below) then a Measurement object will have a dimension attribute. This is an object (of class Dimension) with one data item : dimensionArray.
 
-Each SI base unit (of which there are seven) is associated with a prime number as follows:
+Each SI base unit (of which there are seven) is associated with a text key as follows:
 
 ```
-const TIME = 2;
-const LENGTH = 3;
-const MASS = 5;
-const CURRENT = 7;
-const TEMPERATURE = 11;
-const SUBSTANCE_AMOUNT = 13;
-const LUMINOSITY = 17;
+	const TIME = 'time';
+	const LENGTH = 'length';
+	const MASS = 'mass';
+	const CURRENT = 'current';
+	const TEMPERATURE = 'temperature';
+	const SUBSTANCE_AMOUNT = 'substance_amount';
+	const LUMINOSITY = 'luminosity';
 ```
 
-Any SI derived unit is then a  rational number with products of these primes as its numerator and denominator - which are stored in the MeasurementDimension object. Each quantity that has an SI base unit or SI derived unit  as its base unit can therefore be associated with such an object. This enables dimensional analysis to be carried out on such quantities when (for example) multiplying and dividing them. However, quantities which do not have a base or derived SI unit as their base unit cannot be given a dimension. The config files include some SI base quantities and some SI derived quantities, but not all of them. It is therefore quite possible, for example, to construct a *Measurement::combineMeasurements()* which results in a SI derived quantity for which there is no config file (in which case a 'BaseMeasurement' object is returned).
+The dimension of any SI derived unit is an array where the values for each key is the exponent of the relevant base dimension. So, for example, acceleration has a dimensionArray ``['length' => 1, 'time' => -2]``. Each quantity that has an SI base unit or SI derived unit  as its base unit can therefore be associated with such an object. This enables dimensional analysis to be carried out on such quantities when (for example) multiplying and dividing them. However, quantities which do not have a base or derived SI unit as their base unit cannot be given a dimension. The config files include some SI base quantities and some SI derived quantities, but not all of them. It is therefore quite possible, for example, to construct a *Measurement::combineMeasurements()* which results in a SI derived quantity for which there is no config file (in which case a 'BaseMeasurement' object is returned).
 
-It is (technically) possible for users to extend the dimensions by artificially adding new ones, providing they are represented by distinct prime numbers, but the user is then responsible for the meaningfulness and consistency of the result.
+It is (technically) possible for users to extend the dimensions by artificially adding new ones, providing they are represented by unique text keys, but the user is then responsible for the meaningfulness and consistency of the result.
 
-### Use of Measurement API outside page and fieldtype context
+### Use of Measurement API outside page context
 
-This API can be used outside of the fieldtype context - just create a new Measurement object:
+This API can be used outside of the pagecontext - just create a new Measurement object:
 
 ````
-$measurement = new Measurement(?string $quantity = null, ?string $unit = null, $magnitude = null);
+$m = $modules->get('FieldtypeMeasurement');
+$measurement = $m->measurement(?string $quantity = null, ?string $unit = null, $magnitude = null);
 ````
 
 The arguments may be null and set later, but errors may occur if using methods for objects without all properties set. Use set and get thus:
@@ -227,8 +222,9 @@ If it is more complex then a callback can be used. E.g. add Fahrenheit to the Te
     }, 
     "plural" => "Fahrenheit"]
 ````
-If you a defining a complex conversion for use in addUnit() then define the callback as a variable first then include it as the conversion argument.
+If you a defining a complex conversion for use in addUnit() then define the callback as a variable first then include it as the conversion argument. (This is because you cannot store anonymous functions in session variables.)
 E.g.
+
 ````
 $fahrenheit = function($val, $tofrom){..etc..};
 $measurement->addUnit("Fahrenheit", "Kelvin", "degF", $fahrenheit, "Fahrenheit");
@@ -267,8 +263,10 @@ Combination units (see definition above) need to be defined with a pipe join for
 Config files for quantities which have SI base or SI derived units as their base units may have dimensions assigned (see discussion above). For example, for the Density quantity:
 
 ```
-"dimension" => new MeasurementDimension(MeasurementDimension::MASS, MeasurementDimension::LENGTH ** 3),
+"dimension" => new Dimension([Dimension::MASS => 1, Dimension::LENGTH => -3]),
 ```
+
+(Note that using class constants rather than text keys allows your IDE to hint/check).
 
 ### Other features of config files
 
@@ -276,7 +274,7 @@ An element "alias" can be included to provide an alias to the key name for the u
 
 Additional elements "notes" can be added to describe aspects of the units and conversions in the file. If present, they will appear as markup on the 'details' tab of the field. Notes can be defined at the top level (i.e. the same level as "base" and "units") and/or within each unit array.
 
-Functions may be defined outside the array. These can then be used more than once in the conversion definitions. Note that they should be declared conditionally so that they are not declared more than once. Also it is a good idea to put them in a different namespace. 
+Functions may be defined outside the array. These can then be used more than once in the conversion definitions. It is a good idea to put them in a different namespace which references the quantity name. (Note that all the measurement classes and config files are outside the ProcessWire namespace anyway, to avoid potential clashes - use this same namespace for all new config files).
 
 See Config/SpecificGravity.php and Config/Currency.php for examples of all these features.
 
@@ -285,6 +283,7 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
 
  # Changelog
+ * 0.0.7 new namespaces, refactoring and extended dimensions
  * 0.0.6 minor fixes and new Measurement methods
  * 0.0.5 allowed specific formats in config file, additional units, dimensional analysis supported
  * 0.0.4 altered add() and subtract() methods and added related static functions

@@ -1,9 +1,9 @@
-<?php namespace ProcessWire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 return array(
 ///////Units Of Angle///////
 
-	"dimension" => new MeasurementDimension(1, 1),
+	"dimension" => new Dimension(),
 	'base' => 'radian',
 	'units' => array(
 		"radian" => array("shortLabel" => "rad", "conversion" => 1),

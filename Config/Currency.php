@@ -6,13 +6,12 @@ namespace MeasurementCurrency {
  * This one uses Alpha Vantage (https://www.alphavantage.co/) which has a free service rate limited to 5 per minute and 500 per day
  */
 
-	use ProcessWire\MeasurementException;
-	use ProcessWire\ProcessWire;
+	use MetaTunes\MeasurementClasses\MeasurementException;
+	use function ProcessWire\{wire, __};
 
-	if(!function_exists(__NAMESPACE__ . '\currencyConverter')) {
 		function currencyConverter($currency_from,$currency_to,$currency_input){
 			// Use recent details to avoid 5 per minute lockout
-			$sessionVar = \ProcessWire\wire()->session->get('MeasurementCurrency');
+			$sessionVar = wire()->session->get('MeasurementCurrency');
 			//bd($sessionVar, 'sessionvar');
 			if($sessionVar and isset($sessionVar[$currency_from][$currency_to])) {
 				$savedDetails = $sessionVar[$currency_from][$currency_to];
@@ -22,7 +21,7 @@ namespace MeasurementCurrency {
 					return $currency_input * $rate;
 				}
 			}
-			$apiKey = \ProcessWire\wire()->config->alphaVantageApiKey; // Get your API key from https://www.alphavantage.co/ and put it in your config file
+			$apiKey = wire()->config->alphaVantageApiKey; // Get your API key from https://www.alphavantage.co/ and put it in your config file
 			$json = file_get_contents("https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$currency_from&to_currency=$currency_to&apikey=$apiKey");
 
 			$data = json_decode($json,true);
@@ -30,18 +29,22 @@ namespace MeasurementCurrency {
 			if(isset($data['Realtime Currency Exchange Rate']['5. Exchange Rate'])) {
 				$rate = (float) $data['Realtime Currency Exchange Rate']['5. Exchange Rate'];
 			} else {
-				throw new MeasurementException(\ProcessWire\__("Bad API return (maybe excess calls?)"));
+				throw new MeasurementException(__("Bad API return (maybe excess calls?)"));
 			}
 			$newVar = array_merge_recursive($sessionVar, [$currency_from => [$currency_to => ['time' => time(), 'rate' => $rate]]]);
 			//bd($newVar, 'new var');
-			\ProcessWire\wire()->session->set('MeasurementCurrency', $newVar);
+			wire()->session->set('MeasurementCurrency', $newVar);
 			return $currency_input * $rate;
 		}
-	}
+
 	} // End of MeasurementCurrency namespace
 
-	namespace ProcessWire {
-return array(
+namespace MetaTunes\MeasurementClasses {
+
+	use function MeasurementCurrency\currencyConverter;
+	use function ProcessWire\__;
+
+	return array(
 ///////Units Of Currency///////
 /// This uses the (almost) real-time converter function above
 /// For real-time conversion to work use correct currency codes - see http://en.wikipedia.org/wiki/ISO_4217",
@@ -53,12 +56,12 @@ return array(
 	"units" => array(
 		"USD" => array("shortLabel" => "$", "position" => "prepend", "plural" => "USD", "conversion" => 1),
 		"GBP" => array("shortLabel" => "£", "position" => "prepend", "plural" => "GBP", "conversion" => function($val, $toFrom) {
-			return ($toFrom) ? \MeasurementCurrency\currencyConverter('USD', 'GBP', $val) :
-				\MeasurementCurrency\currencyConverter('GBP', 'USD', $val);
+			return ($toFrom) ? currencyConverter('USD', 'GBP', $val) :
+				currencyConverter('GBP', 'USD', $val);
 		},),
 		"EUR" => array("shortLabel" => "€", "position" => "prepend", "plural" => "EUR", "conversion" => function($val, $toFrom) {
-			return ($toFrom) ? \MeasurementCurrency\currencyConverter('USD', 'EUR', $val) :
-				\MeasurementCurrency\currencyConverter('EUR', 'USD', $val);
+			return ($toFrom) ? currencyConverter('USD', 'EUR', $val) :
+				currencyConverter('EUR', 'USD', $val);
 		},),
 	)
 );

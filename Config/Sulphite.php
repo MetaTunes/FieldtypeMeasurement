@@ -9,7 +9,8 @@
  */
 
 
-namespace ProcessWire {
+namespace MetaTunes\MeasurementClasses {
+	use function ProcessWire\__;
 
 	return array(
 
@@ -18,7 +19,7 @@ namespace ProcessWire {
 
 		'base' => 'ppm SO2 [L]',
 		'units' => array(
-			"ppm SO2 [1L]"  => array(
+			"ppm SO2 [L]"  => array(
 				"alias" => __("part per million of sulphur dioxide in 1 litre"),
 				"shortLabel" => __("ppm SO2 [L]"),
 				"conversion" => 1,

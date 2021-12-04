@@ -1,8 +1,9 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Pressure///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::MASS, MeasurementDimension::LENGTH * MeasurementDimension::TIME ** 2),
+	"dimension" => new Dimension([Dimension::MASS => 1, Dimension::LENGTH => -1,  Dimension::TIME => -2]),
 	'base' => 'pascal',
 	'units' => array(
 		"pascal" => array("shortLabel" => "Pa", "conversion" => 1),

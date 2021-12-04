@@ -17,8 +17,8 @@
  */
 
 
-namespace ProcessWire {
-
+namespace MetaTunes\MeasurementClasses {
+	use function ProcessWire\__;
 	return array(
 
 		'notes' => __("Most winemaking texts use tartaric acid (the main acid in grapes) as the reference, with units of either percent or grams/litre (parts per thousand, or ppt).

@@ -1,4 +1,5 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Power///////
@@ -8,7 +9,7 @@ return array(
 	Power is related to other quantities, for example the power involved in moving a ground vehicle is the product of the traction force on the wheels and the velocity of the vehicle. 
 	The output power of a motor is the product of the torque that the motor generates and the angular velocity of its output shaft. 
 	Likewise, the power dissipated in an electrical element of a circuit is the product of the current flowing through the element and of the voltage across the element."),
-	"dimension" => new MeasurementDimension(MeasurementDimension::MASS * MeasurementDimension::LENGTH ** 2, MeasurementDimension::TIME ** 3),
+	"dimension" => new Dimension([Dimension::MASS => 1, Dimension::LENGTH => 2, Dimension::TIME => -3]),
 	"base" => "watt",
 	"units" => array(
 		"watt" => array("shortLabel" => "W", "conversion" => 1),

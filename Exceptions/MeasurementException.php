@@ -1,5 +1,5 @@
-<?php namespace ProcessWire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use ProcessWire\WireException;
 use \Throwable;
 
 class MeasurementException extends WireException

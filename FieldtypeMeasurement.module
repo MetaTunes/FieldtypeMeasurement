@@ -1,10 +1,11 @@
 <?php namespace ProcessWire;
+use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
 
 /**
  * ProcessWire Measurement Fieldtype
  *
- * Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and value (in the specified units).
- * Define quantity and unit options field settings.
+ * Field that stores 4 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and value (in base units and the specified units).
+ * Define quantity and unit options field settings. These may be different in different template contexts.
  *
  * @author Mark Evens
  * @license Licensed under GNU/GPL v3
@@ -16,7 +17,8 @@
  *
  * http://processwire.com
  *
- * @version 0.0.6
+ * @version 0.0.7
+ * @since 0.0.6 new namespaces, refactoring and extended dimensions
  * @since 0.0.5 minor fixes and new Measurement methods
  * @since 0.0.4 allowed specific formats in config file, additional units, dimensional analysis supported
  * @since 0.0.3 added static function addMeasurement(), altered add() and subtract() methods to Measurement, bug fixes
@@ -30,11 +32,16 @@
  * ===============================
  * @property string $quantity The physical quantity to be measured
  * @property string $units The units to be presented as options
+ * @property string $unit The current selected unit
+ * @property string $magnitude The magnitude (in terms of the selected unit)
+ * @property bool $hide_quantity Do not show quantity info in the inputfield
+ * @property bool $show_update Show the checkbox to convert units in the inputfield
  *
  *  * ERROR STRINGS
  * @property string $invalidUnits
  *
  */
+
 
 class FieldtypeMeasurement extends Fieldtype {
 
@@ -46,14 +53,39 @@ class FieldtypeMeasurement extends Fieldtype {
 	public function __construct() {
 		parent::__construct();
 		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/Measurement.php');
-		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/MeasurementDimension.php');
+		require_once(wire('config')->paths->siteModules . basename(__DIR__) . '/Dimension.php');
 	}
 
-	public static function getModuleInfo() {
+	/**
+	 * Create a Measurement object for API usage
+	 * E.g. Get the module: ````$mm = $modules->get('FieldtypeMeasurement');````
+	 * then use this to construct a new measurement: ````$measure = $mm->measurement();````
+	 * The arguments may be null and set later, but errors may occur if using methods for objects without all properties set. Use set and get thus:
+	````
+	$measurement->set('quantity', 'Area');
+	$measurement->get('quantity');
+	````
+	 * For combination units, the magnitude must be an array or a string of numbers with pipe joins, e.g. '2|3.5'
+	 *
+	 * @see MetaTunes\MeasurementClasses\Measurement::__construct
+	 *
+	 * @param string|null $quantity
+	 * @param string|null $unit
+	 * @param null $magnitude
+	 * @return Measurement
+	 */
+	public function measurement(?string $quantity = null, ?string $unit = null, $magnitude = null) {
+		return new Measurement($quantity, $unit, $magnitude);
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getModuleInfo(): array {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
-			'summary' => __('Field that stores 3 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.5',
+			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
+			'version' => '0.0.7',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
@@ -66,13 +98,31 @@ class FieldtypeMeasurement extends Fieldtype {
 	 */
 	public function init() {
 		$this->invalidUnits = __('This unit is not valid for the quantity type of this field. Resetting value to zero.');
+
+		// magnitudes must be numbers, arrays of numbers or numbers separated by pipe | symbols
+		// The sanitizer will return an array of floats
+		$this->wire()->sanitizer->addHook('magnitude', function(HookEvent $event) {
+			$sanitizer = $event->object;
+			$value = $event->arguments(0); // get first argument given to method
+			if(!is_array($value)) $value = explode('|', $value);
+			foreach($value as $key => $item) {
+				$value[$key] = $sanitizer->float($item);
+			}
+			$event->return = $value;
+		});
+
 		parent::init();
 	}
 
 	/**
 	 * Format value for output
+	 * See Measurement::format() for details of format options
+	 * @see MetaTunes\MeasurementClasses\Measurement::format()
 	 *
-	 * @see Measurement.php
+	 * @param Page $page
+	 * @param Field $field
+	 * @param int|object|string $value
+	 * @return int|mixed|object|string|null
 	 */
 	public function ___formatValue(Page $page, Field $field, $value) {
 		if(!$value instanceof Measurement) return null;
@@ -88,15 +138,18 @@ class FieldtypeMeasurement extends Fieldtype {
 	 *
 	 * @throws WireException
 	 */
-	public function getInputfield(Page $page, Field $field) {
+	public function getInputfield(Page $page, Field $field): Inputfield {
 		$inputfield = $this->wire('modules')->get('InputfieldMeasurement');
 		$inputfield->setField($field);
+		$inputfield->setPage($page);
 		return $inputfield;
 	}
 
 	/**
-	 * nothing compatible?
+	 * Get compatible fieldtypes
+	 * No known compatible types
 	 *
+	 * @param Field $field
 	 * @throws WireException
 	 */
 	public function ___getCompatibleFieldtypes(Field $field) {
@@ -120,54 +173,50 @@ class FieldtypeMeasurement extends Fieldtype {
 	 * @throws WireException
 	 */
 	public function ___wakeupValue(Page $page, Field $field, $value) {
-
 		// if for some reason we already get a valid value, then just return it
 		if($value instanceof Measurement) return $value;
 		//bd($value, 'wakeup value');
 		// start a blank value to be populated
 		$measurement = $this->getBlankValue($page, $field);
-
 		// if we were given a blank value, then we've got nothing to do: just return a blank Measurement object
 		if(empty($value) || !is_array($value)) return $measurement;
-
 		// create new Measurement object
-		//bd($measurement, 'measurement0 in ___wakeupValue');
-//bd($value['data'], 'data in wakeupvalue');
-		$measurement->quantity = $value['quantity'];
+		//bd($measurement, 'measurement0 in ___wakeupValue'); //debug
+		if($value['quantity'] != $measurement->quantity) {
+			$this->error(sprintf($this->_(
+				'Quantity (%1$s) in database is different from quantity (%2$s) required in this context. Setting quantity to the context quantity.'),
+				$measurement->quantity, $context->quantity));
+			// $measurement->quantity will already have been set to $context->quantity in getBlankValue
+		}
 		if(!in_array($measurement->quantity, Measurement::getQuantities())) {
 			$this->error(sprintf($this->_(
 				'Quantity (%s) in database has no Config file'),
 				$measurement->quantity));
 			return $measurement;
 		}
-		$measurement->baseMagnitude = $value['data'];
-		$measurement->dimension = Measurement::getDimension($measurement->quantity);
+		$measurement->magnitude = $measurement->baseMagnitude = $value['data'];
+
 		if($value['unit']) {
-			$measurement->unit = $value['unit'];
-			$units = Measurement::getUnits($measurement->quantity);
-			//bd($units);
+			$measurement->convertTo($value['unit']);
+			$units = $measurement->getUnits();
 			if(array_key_exists($value['unit'], $units) && isset($value['magnitude'])) {
-				$measurement->magnitude = explode('|', $value['magnitude']); // $measurement->valueFromBase($value['data'], $value['unit']);
+				$measurement->magnitude = $this->wire()->sanitizer->magnitude($value['magnitude']); // sanitizer added in hook in init
 			} else {
-				$measurement->magnitude = $measurement->baseMagnitude;
-				$measurement->unit = Measurement::getBaseUnit($measurement->quantity);
+				$measurement->unit = $measurement->units->base;
 				$this->error(sprintf($this->_(
 					'The previously saved unit (%1$s) is not (or no longer) compatible with this quantity (%2$s). Perhaps a changed config file? Value is shown as base units.'),
 					$value['unit'], $measurement->quantity) . ($this->_("\nThe best way to fix this may be to save the base unit value shown and then convert to the required unit.")));
 			}
 		} else {
-			$measurement->unit = Measurement::getBaseUnit($measurement->quantity);
-			$measurement->magnitude = $measurement->baseMagnitude;
+			$measurement->unit = $measurement->units->base;
 			$this->error($this->_(
 				'Unit is not known. Value is shown as base units. Please amend as appropriate.'));
 		}
 		if(!is_array($measurement->magnitude)) $measurement->magnitude = [$measurement->magnitude];
-
-		//bd($measurement, 'measurement1 in ___wakeupValue');
+		//bd($measurement, 'measurement1 in ___wakeupValue');  //debug
 		// get the current shortLabel and plural from the config file - not a saved version
 		if($measurement->unit and $measurement->quantity) {
-			$units = Measurement::getUnits($measurement->quantity);
-
+			$units = $measurement->getUnits();
 				foreach($units[$measurement->unit] as $key => $item) {
 					if($key == 'conversion') continue;
 					if(isset($units[$measurement->unit][$key])) {
@@ -175,38 +224,32 @@ class FieldtypeMeasurement extends Fieldtype {
 					} else {
 						if($measurement->get($key)) $measurement->remove($key);
 					}
-
 				}
-
 			if($this->unit and !is_null($this->magnitude)) {
 				$this->convertFrom($this->magnitude, $this->unit);
 			}
-
 		}
-		// $measurement->resetTrackChanges();
-		//bd($measurement, 'measurement2 in ___wakeupValue');
+		 $measurement->resetTrackChanges();
+		//bd($measurement, 'measurement2 in ___wakeupValue'); //debug
 		return $measurement;
 	}
 
 	/**
 	 * Return a blank ready-to-populate version of a field of this type
 	 *
-	 * @return object
-	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @return Measurement
 	 */
-	public function getBlankValue(Page $page, Field $field) {
-		$measurement = new Measurement($field->quantity, null, []);
-		//bd($measurement, 'new measurement in getBlankValue');
-		//bd($field, 'field in getBlankValue');
-		//bd($field->quantity, 'quantity in getBlankValue');
-		if ($field->quantity) $measurement->set('quantity', $field->quantity);
-		//ToDo - check that it is OK to delete the following
-//		if ($field->units) $measurement->set('units', $field->units);
+	public function getBlankValue(Page $page, Field $field): Measurement {
+		//NB Field details may differ between templates so we need to get the field in context
+		$context = $field->getContext($page->template);
+		/* @var $context FieldtypeMeasurement */
+		$measurement = new Measurement($context->quantity, null, []);
+		if ($context->quantity) $measurement->set('quantity', $context->quantity);
 		$measurement->set('magnitude', []);
 		$measurement->set('shortLabel', null);
 		$measurement->set('plural', null);
-		$measurement->setTrackChanges(true);
-		//bd($measurement, 'measurement returned from getBlankValue');
 		return $measurement;
 	}
 
@@ -215,56 +258,61 @@ class FieldtypeMeasurement extends Fieldtype {
 	 *
 	 * @param Page $page
 	 * @param Field $field
+	 * @param array|float|int|object|string $value
 	 * @return array
-	 *
+	 * @throws WireException
 	 */
-	public function ___sleepValue(Page $page, Field $field, $value) {
+	public function ___sleepValue(Page $page, Field $field, $value): array {
 
 		$sleepValue = array();
-//bd($value, 'value in sleep');
+		// bd($value, 'value to sleep'); //debug
 		// if we are given something other than a Measurement object,
 		// then just return a blank array
 		if(!$value instanceof Measurement) return $sleepValue;
+		// If $value does not have a quantity, reconstruct it
+		if(!$value->quantity) {
+			$context = $field->getContext($page->template);
+			$value->quantity = $context->quantity;
+			$value = new Measurement($value->quantity, $value->unit, $value->magnitude);
+		}
 
-		//bd($value);
 		if($value->get('unit')) {
 			// Use up-to-date conversion to save base magnitude, if we have a unit
-			//bd($value->valueAsBase());
 			$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
 		} else if($value->get('baseMagnitude')) {
 			$data = $value->get('baseMagnitude');
 		} else {
 			$data = 0;
 		}
-		//bd($data, 'data in ___sleepValue');
 		$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
 		$sleepValue = array(
 			'data' => $data,
 			'magnitude' => $magnitude,
-			'unit' => $value->get('unit'),
-			'quantity' => $value->get('quantity')
+			'unit' => $value->unit,
+			'quantity' => $value->quantity
 		);
-//bd($sleepValue, 'sleepValue');
+		//bd($sleepValue, 'sleepValue'); //debug
 		return $sleepValue;
 	}
 
 	/**
 	 * Given a value, make it clean for storage within a Page
 	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @param int|object|WireArray|string $value
+	 * @return int|Measurement|object|WireArray|string
 	 * @throws WireException
 	 */
 	public function sanitizeValue(Page $page, Field $field, $value) {
-
 		// if given a blank value, return a valid blank value
-		if(empty($value)) return $this->getBlankValue($page, $field, $value);
-
+		if(empty($value)) return $this->getBlankValue($page, $field);
 		// if given something other than a Measurement object, throw an error
 		if(!$value instanceof Measurement) {
 			throw new WireException(sprintf($this->_('Value set to field %s must be a Measurement object'), $field->name));
 		}
-
-		// note that sanitization of individual fields within a given event is already
-		// performed by the Measurement::set() method, so we don't need to do anything else here.
+		// note that sanitization of individual fields within a given measurement is already
+		// performed in the Measurement class, so we don't need to do anything else here.
 
 		return $value;
 	}
@@ -272,23 +320,24 @@ class FieldtypeMeasurement extends Fieldtype {
 	/**
 	 * Return the database schema that defines a Measurement
 	 *
+	 * @param Field $field
+	 * @return array
 	 */
-	public function getDatabaseSchema(Field $field) {
-
+	public function getDatabaseSchema(Field $field): array {
 		$schema = parent::getDatabaseSchema($field);
-
 		$schema['data'] = 'double NOT NULL';  // value in base units
 		$schema['magnitude'] = 'varchar(64)'; // value in current units - needs to be text to store composite values
 		$schema['unit'] = 'text NOT NULL';
 		$schema['quantity'] = 'text NOT NULL';
-
-
 		return $schema;
 	}
 
 	/**
-	 * Method called when the field is database-queried from a selector
 	 *
+	 * Method called when the field is database-queried from a selector
+	 * For Measurement objects, the baseMagnitude setting is stored in the DB as 'data'
+	 *
+	 * @see Fieldtype::getMatchQuery()
 	 * @throws WireException
 	 */
 	public function getMatchQuery($query, $table, $subfield, $operator, $value) {
@@ -297,19 +346,69 @@ class FieldtypeMeasurement extends Fieldtype {
 		return parent::getMatchQuery($query, $table, $subfield, $operator, $value);
 	}
 
+	/**
+	 * Adds the unit as a selectable item in the given field
+	 * If $template is given, save the field in that context only
+	 *
+	 * @param string $field
+	 * @param string $unit
+	 * @param string|null $template
+	 * @throws WireException
+	 */
+	public static function addSelectableUnit(string $field, string $unit, ?string $template = null) {
+		$f = wire()->fields->get($field);
+		if($template) $f = $f->getContext($template);
+		$units = $f->get('units');
+		if(!in_array($unit, $units)) $units[] = $unit;
+		$f->set('units', $units);
+		if($template) {
+			$template = wire()->templates->get($template);
+			wire()->fields->saveFieldgroupContext($f,$template->fieldgroup);
+			$template->save();
+		} else {
+			$f->save();
+		}
+	}
+
+	/**
+	 * Removes the unit as a selectable item in the given field
+	 * If $template is given, remove the field in that context only
+	 *
+	 * @param string $field
+	 * @param string $unit
+	 * @param string|null $template
+	 * @throws WireException
+	 */
+	public static function removeSelectableUnit(string $field, string $unit, ?string $template = null) {
+		$f = wire()->fields->get($field);
+		if($template) $f = $f->getContext($template);
+		$units = $f->get('units');
+		if(in_array($unit, $units)) {
+			$key = array_search($unit, $units);
+			unset($units[$key]);
+		}
+		$f->set('units', $units);
+		if($template) {
+			$template = wire()->templates->get($template);
+			wire()->fields->saveFieldgroupContext($f,$template->fieldgroup);
+			$template->save();
+		} else {
+			$f->save();
+		}
+	}
 
 	/**
 	 * Get any inputfields used for configuration of this Fieldtype.
-	 *
 	 * This is in addition any configuration fields supplied by the parent Inputfield.
 	 *
+	 * @see Inputfield::getConfigInputfields()
 	 * @param Field $field
 	 * @return InputfieldWrapper
 	 *
 	 * @throws WirePermissionException
 	 */
-	public function ___getConfigInputfields(Field $field) {
-
+	public function ___getConfigInputfields(Field $field): InputfieldWrapper {
+		/* @var $field \ProcessWire\FieldtypeMeasurement */
 		$inputfields = parent::___getConfigInputfields($field);
 
 		$f = $this->modules->get("InputfieldSelect");
@@ -329,18 +428,17 @@ class FieldtypeMeasurement extends Fieldtype {
 		$f = $this->modules->get('InputfieldCheckbox');
 		$f->attr('name', 'hide_quantity');
 		$f->label = __('Hide quantity display in the input field.');
-		$f->attr('checked', $field->hide_quantity ? 'checked' : '' );
+		$f->attr('checked', $field->hide_quantity ? 'checked' : '');
 		$f->columnWidth = 50;
 		$inputfields->append($f);
 
 		$quantity = $field->get('quantity');
-		$units = ($quantity) ? Measurement::getUnits($quantity) : [];
 		if($quantity) {
-
-			$notes = '<p>' . Measurement::getQuantityNotes($quantity) . '</p>';
+			$m = $this->measurement($quantity);
+			$units = $m->units->definitions;
+			$notes = ($m->units->notes) ? '<p>' . $m->units->notes . '</p>' : '';
 			foreach($units as $key => $unit) {
-				//bd($unit);
-				$extraNotes = isset($unit['notes']) ? "<h4>{$key}</h4><p>{$unit['notes']}</p>" : null;
+				$extraNotes = isset($unit->notes) ? "<h4>{$key}</h4><p>{$unit->notes}</p>" : null;
 				$notes .= $extraNotes;
 			}
 
@@ -358,7 +456,7 @@ class FieldtypeMeasurement extends Fieldtype {
 			$f->name = $f_name;
 			$f->label = __('Select the units you want to appear as options for this field.');
 			$f->columnWidth = 50;
-			$quantity = $field->get('quantity');
+//			$quantity = $field->get('quantity');
 			foreach($units as $key => $unit) {
 				$shortLabel = $unit['shortLabel'];
 				if($shortLabel) $shortLabel = "($shortLabel)";
@@ -376,9 +474,21 @@ class FieldtypeMeasurement extends Fieldtype {
 			$f->columnWidth = 50;
 			$inputfields->append($f);
 		}
-
+		//bd($inputfields, 'inputfields');
 		return $inputfields;
 	}
 
+	/**
+	 * Allow field settings to be modified on a template by template basis
+	 * Context-modifiable field settings are ````['quantity', 'units', 'hide_quantity', 'show_update']````
+	 *
+	 * @see Fieldtype::getConfigAllowContext()
+	 * @param Field $field
+	 * @return array|string[]
+	 */
+	public function ___getConfigAllowContext(Field $field): array {
+		$a = array('quantity', 'units', 'hide_quantity', 'show_update');
+		return array_merge(parent::___getConfigAllowContext($field), $a);
+	}
 
 }

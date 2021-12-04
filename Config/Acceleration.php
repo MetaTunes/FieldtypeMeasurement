@@ -1,8 +1,9 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Acceleration///////
- 	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH, MeasurementDimension::TIME ** 2),
+ 	"dimension" => new Dimension([Dimension::LENGTH => 1, Dimension::TIME => -2]),
 	'base' => 'metre per second squared',
 	'units' => array(
 		"metre per second squared" => array("shortLabel" => "m/s\u{00B2}", "conversion" => 1, "plural" => __("metres per second squared")),

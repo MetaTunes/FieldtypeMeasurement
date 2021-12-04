@@ -1,8 +1,9 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Time///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::TIME, 1),
+	"dimension" => new Dimension([Dimension::TIME => 1]),
 	'notes' => __("The base unit for time is the second. Units which are shown as [Date] are measured with the base being seconds since 1/1/1970 (ie.Unix timestamp)."),
 	'base' => 'second',
 	'units' => array(

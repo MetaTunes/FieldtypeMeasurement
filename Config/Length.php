@@ -1,9 +1,9 @@
-<?php namespace Processwire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 	///////Units Of Length///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH, 1),
+	"dimension" => new Dimension([Dimension::LENGTH => 1]),
 	"notes" => "The base unit for Length is the metre, which is an SI unit defined as the length of the path travelled by light in a vacuum in 1/299792458 of a second.",
 	"base" => 'metre',
 	"units" => array(

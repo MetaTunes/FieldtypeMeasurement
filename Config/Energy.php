@@ -1,4 +1,5 @@
-<?php namespace ProcessWire;
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Energy///////
@@ -6,7 +7,7 @@ return array(
 	It is equal to the energy transferred to (or work done on) an object when a force of one newton acts on that object in the direction of the force's motion through a distance of one metre (1 newton-metre or N⋅m). 
 	It is also the energy dissipated as heat when an electric current of one ampere passes through a resistance of one ohm for one second. 
 	It is named after the English physicist James Prescott Joule (1818–1889)."),
-	"dimension" => new MeasurementDimension(MeasurementDimension::MASS * MeasurementDimension::LENGTH ** 2, MeasurementDimension::TIME ** 2),
+	"dimension" => new Dimension([Dimension::MASS => 1, Dimension::LENGTH => 2, Dimension::TIME => -2]),
 	"base" => "joule",
 	"units" => array(
 		"joule" => array("shortLabel" => "J", "conversion" => 1),

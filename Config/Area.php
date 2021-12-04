@@ -1,8 +1,8 @@
-<?php namespace ProcessWire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 return array(
 ///////Units Of Area///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH ** 2, 1),
+	"dimension" => new Dimension([Dimension::LENGTH => 2]),
 	'base' => 'square metre',
 	'units' => array(
 		"square metre" => array("shortLabel" => "m^2", "conversion" => 1), //square metre - base unit for area

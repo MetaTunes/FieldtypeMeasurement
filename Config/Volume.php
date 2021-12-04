@@ -1,9 +1,9 @@
-<?php namespace ProcessWire;
-
+<?php namespace MetaTunes\MeasurementClasses;
+use function ProcessWire\__;
 
 return array(
 ///////Units Of Volume///////
-	"dimension" => new MeasurementDimension(MeasurementDimension::LENGTH ** 3, 1),
+	"dimension" => new Dimension([Dimension::LENGTH => 3]),
 	'base' => 'cubic metre',
 	'units' => array(
 		"cubic metre" => array("shortLabel" => "m^3", "conversion" => 1),

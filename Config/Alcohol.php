@@ -10,8 +10,8 @@
  */
 
 
-namespace ProcessWire {
-
+namespace MetaTunes\MeasurementClasses {
+	use function ProcessWire\__;
 	return array(
 
 		'notes' => __("The base unit for alcohol content is % alcohol by volume, subjected to an upper limit of 100% and a lower limit of 0%. All measurements are at 20°C"),
