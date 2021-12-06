@@ -243,7 +243,7 @@ class FieldtypeMeasurement extends Fieldtype {
 	 */
 	public function getBlankValue(Page $page, Field $field): Measurement {
 		//NB Field details may differ between templates so we need to get the field in context
-		$context = ($page & $page->id) ? $field->getContext($page->template) : $field;
+		$context = ($page && $page->id) ? $field->getContext($page->template) : $field;
 		/* @var $context FieldtypeMeasurement */
 		$measurement = new Measurement($context->quantity, null, []);
 		if ($context->quantity) $measurement->set('quantity', $context->quantity);
