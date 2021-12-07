@@ -284,6 +284,10 @@ class FieldtypeMeasurement extends Fieldtype {
 		} else {
 			$data = 0;
 		}
+
+		if($value->get('magnitude') === []) {
+			$value->set('magnitude', [0]);
+		}
 		$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
 		$sleepValue = array(
 			'data' => $data,
