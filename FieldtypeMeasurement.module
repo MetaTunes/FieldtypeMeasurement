@@ -276,6 +276,9 @@ class FieldtypeMeasurement extends Fieldtype {
 			$value = new Measurement($value->quantity, $value->unit, $value->magnitude);
 		}
 
+		if($value->get('magnitude') === []) {
+			$value->set('magnitude', [0]);
+		}
 		if($value->get('unit')) {
 			// Use up-to-date conversion to save base magnitude, if we have a unit
 			$data = (is_array($value->valueAsBase()) ? $value->valueAsBase()[0] : $value->valueAsBase());
@@ -283,10 +286,6 @@ class FieldtypeMeasurement extends Fieldtype {
 			$data = $value->get('baseMagnitude');
 		} else {
 			$data = 0;
-		}
-
-		if($value->get('magnitude') === []) {
-			$value->set('magnitude', [0]);
 		}
 		$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
 		$sleepValue = array(
