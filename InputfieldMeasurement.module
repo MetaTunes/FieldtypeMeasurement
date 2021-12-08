@@ -133,7 +133,8 @@ class InputfieldMeasurement extends Inputfield {
         $f = $this->modules->get("InputfieldText");
         $f->label = $this->_("Magnitude");
         $f->attr('name', "{$name}_magnitude");
-        $f->attr('value', implode('|', $value->get('magnitude')));  // magnitude is an array
+		$magnitude = (is_array($value->get('magnitude'))) ?  implode('|', $value->get('magnitude')) : $value->get('magnitude');
+        $f->attr('value', $magnitude);
 		$f->addClass('InputfieldMeasurement_magnitude');
 //		$f->attr('placeholder', $value->get('unit'));
 		$f->notes = __("Number or numbers separated by a 'pipe' | - e.g 2|3.4 (for combi units) ");
