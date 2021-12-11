@@ -181,11 +181,13 @@ class InputfieldMeasurement extends Inputfield {
      * @return bool
      *
      */
-    public function isEmpty() {
-        $value = $this->attr('value');
-        if (is_object($value) && !strlen("{$value->magnitude}")) return true;
-        return false; 
-    }
+	public function isEmpty() {
+		$value = $this->attr('value');
+		if(!$value->magnitude) return true;
+		if(is_array($value->magnitude)) $value->magnitude = implode('|', $value->magnitude);
+		if(is_object($value) && !strlen("{$value->magnitude}")) return true;
+		return false;
+	}
 
     /**
      * Process the input from the given WireInputData (usually $input->get or $input->post), load and clean the value for use in this Inputfield.
