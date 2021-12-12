@@ -61,7 +61,7 @@ To use the API you need the **unformatted** field - i.e. either directly from
 ````
 $page->getUnformatted('my_measurement_field');
 ````
-or by setting $page->of(false).
+or by setting $page->of(false). Note that, if using getUnformatted(), the argument needs to be the field name (string), not the field object.
 
 The unformatted field is an object of class "Measurement" (which extends WireData). The main methods of this class are described below.
 
