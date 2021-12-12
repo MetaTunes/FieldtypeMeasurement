@@ -6,7 +6,7 @@ return array(
 	"dimension" => new Dimension([Dimension::LENGTH => 3]),
 	'base' => 'cubic metre',
 	'units' => array(
-		"cubic metre" => array("shortLabel" => "m^3", "conversion" => 1),
+		"cubic metre" => array("shortLabel" => "m\u{00B3}", "conversion" => 1),
 		"litre" => array("shortLabel" => "L", "conversion" => 1 / 1000),
 		"cubic decimetre" => array("shortLabel" => "dm^3", "conversion" => 1 / 1000),
 		"millilitre" => array("shortLabel" => "ml", "conversion" => .000001),
@@ -35,10 +35,10 @@ return array(
 		"imperial gallon" => array("shortLabel" => "imp gal", "conversion" => 4.54609 / 1000),
 		"UK gallon" => array("shortLabel" => "UK gal", "conversion" => 4.54609 / 1000),
 		"US gallon" => array("shortLabel" => "US gal", "conversion" => 3.78541 / 1000),
-		"cubic foot" => array("shortLabel" => "ft^3", "conversion" => 28.316846592 / 1000, 'plural' => 'cubic feet'),
-		"cubic mile" => array("shortLabel" => "mi^3", "conversion" => 4168180000),
-		"cubic yard" => array("shortLabel" => "yd^3", "conversion" => 764.55485798 / 1000),
-		"cubic inch" => array("shortLabel" => "in^3", "conversion" => 0.016387064 / 1000, 'plural' => 'cubic inches'),
+		"cubic foot" => array("shortLabel" => "ft\u{00B3}", "conversion" => 28.316846592 / 1000, 'plural' => 'cubic feet'),
+		"cubic mile" => array("shortLabel" => "mi\u{00B3}", "conversion" => 4168180000),
+		"cubic yard" => array("shortLabel" => "yd\u{00B3}", "conversion" => 764.55485798 / 1000),
+		"cubic inch" => array("shortLabel" => "in\u{00B3}", "conversion" => 0.016387064 / 1000, 'plural' => 'cubic inches'),
 	)
 
 );

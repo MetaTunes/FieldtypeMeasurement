@@ -36,15 +36,15 @@ For cider-making, malic acid (the main acid in apples) is often used.
 				"notes" => __("A milli-equivalent (mEq, meq or mequiv) is the amount of a substance that will react with or supply one-thousandth of a mole of hydrogen ions (H+) in an acid-base reaction.")
 			),
 
-			"g/L sulphuric" => array("alias" => __("gram per litre [sulphuric]"), "shortLabel" => __("g/L [s]"), "conversion" => 98.08 / 2000, "plural" => __("grams per litre [sulphuric]")),
-			"g/L tartaric" => array("alias" => __("gram per litre [tartaric]"), "shortLabel" => __("g/L [t]"), "conversion" => 150.09 / 2000, "plural" => __("grams per litre [tartaric]")),
-			"g/L malic" => array("alias" => __("gram per litre [malic]"), "shortLabel" => __("g/L [m]"), "conversion" => 134.09 / 2000, "plural" => __("grams per litre [malic]")),
+			"g/L sulphuric" => array("alias" => __("gram per litre [sulphuric]"), "shortLabel" => __("g/L [s]"), "conversion" => 2000/98.08, "plural" => __("grams per litre [sulphuric]")),
+			"g/L tartaric" => array("alias" => __("gram per litre [tartaric]"), "shortLabel" => __("g/L [t]"), "conversion" => 2000/150.09, "plural" => __("grams per litre [tartaric]")),
+			"g/L malic" => array("alias" => __("gram per litre [malic]"), "shortLabel" => __("g/L [m]"), "conversion" => 2000/134.09, "plural" => __("grams per litre [malic]")),
 			// ppt is the same as g/L - just a different way of describing it
-			"ppt sulphuric" => array("alias" => __("part per thousand [sulphuric]"), "shortLabel" => __("ppt [s]"), "conversion" => 98.08 / 2000, "plural" => __("parts per thousand [sulphuric]")),
-			"ppt tartaric" => array("alias" => __("part per thousand [tartaric]"), "shortLabel" => __("ppt [t]"), "conversion" => 150.09 / 2000, "plural" => __("parts per thousand [tartaric]")),
-			"ppt malic" => array("alias" => __("part per thousand [malic]"), "shortLabel" => __("ppt [m]"), "conversion" => 134.09 / 2000, "plural" => __("parts per thousand [malic]")),
+			"ppt sulphuric" => array("alias" => __("part per thousand [sulphuric]"), "shortLabel" => __("ppt [s]"), "conversion" => 2000/98.08, "plural" => __("parts per thousand [sulphuric]")),
+			"ppt tartaric" => array("alias" => __("part per thousand [tartaric]"), "shortLabel" => __("ppt [t]"), "conversion" => 2000/150.09, "plural" => __("parts per thousand [tartaric]")),
+			"ppt malic" => array("alias" => __("part per thousand [malic]"), "shortLabel" => __("ppt [m]"), "conversion" => 2000/134.09, "plural" => __("parts per thousand [malic]")),
 			)
 	);
 
-} // end of Processwire namespace
+}
 
