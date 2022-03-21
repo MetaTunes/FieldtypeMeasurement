@@ -41,7 +41,9 @@ class ConversionDefinition extends WireData
 				if(in_array($key, ['conversion', 'unit', 'conversion'])) continue;
 				$this->set($key, $item);
 			}
+		//bd($this->conversion, 'conversion');
         if(!is_numeric($this->conversion) && !is_callable($this->conversion)) {
+			//bd($this->conversion, 'conversion not callable in ConversionDefinition?');
             throw new MeasurementException($this->_("A conversion must be either numeric or a callable."));
         }
     }
@@ -83,6 +85,9 @@ class ConversionDefinition extends WireData
     	//bd([$this->conversion, $value]);
 //		bd(debug_backtrace());
         if (is_numeric($this->conversion)) {
+			if(is_array($value)) {
+				$value = ($value) ? $value[0] : 0;
+			}
             return $value * $this->conversion;
         } elseif (is_callable($this->conversion)) {
 			try {
@@ -118,4 +123,19 @@ class ConversionDefinition extends WireData
         }
         throw new MeasurementException($this->_("The conversion must be either numeric or callable."));
     }
+
+	/**
+	 * Get params suitable for use in constructing new unit
+	 *
+	 * @return array
+	 */
+	// NB the return value is indexed by the unit first
+	public function params() {
+		$data = $this->data;
+		$conversion = $this->conversion;
+		$unit = $this->unit;
+		return array(
+			$unit => array_merge($data, ['conversion' => $conversion])
+		);
+	}
 }

@@ -26,6 +26,7 @@ However, other texts use different acids as the reference, with sulphuric acid b
 For cider-making, malic acid (the main acid in apples) is often used.
 \n milli-equivalent is used as the base in the these calculations as it does not depend on the acid type"),
 
+		"dimension" => new Dimension([Dimension::SUBSTANCE_AMOUNT => 1]),
 		'base' => 'milli-equivalent',
 		'units' => array(
 			"milli-equivalent"  => array(

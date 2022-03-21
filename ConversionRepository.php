@@ -48,14 +48,16 @@ class ConversionRepository extends WireData {
 	 * @throws MeasurementInvalidUnitException
 	 */
 	public function addConversion(ConversionDefinition $definition): void {
-		if($this->unitExists($definition->getUnit())) {
-			throw new MeasurementInvalidUnitException(sprintf($this->_('Unit %s is already defined.'), $definition->getUnit()));
-		}
-		if(!$this->unitExists($definition->getBaseUnit()) && $definition->isBaseUnit()) {
-			throw new MeasurementException($this->_("Base Unit Does Not Exist"));
-		}
-		$this->definitions[$definition->getUnit()] = $definition;
+		if($definition->getUnit()) {
+			if($this->unitExists($definition->getUnit())) {
+				throw new MeasurementInvalidUnitException(sprintf($this->_('Unit %s is already defined.'), $definition->getUnit()));
+			}
+			if(!$this->unitExists($definition->getBaseUnit()) && $definition->isBaseUnit()) {
+				throw new MeasurementException($this->_("Base Unit Does Not Exist"));
+			}
+			$this->definitions[$definition->getUnit()] = $definition;
 //		bd($this->definitions);
+		}
 	}
 
 	/**
@@ -98,7 +100,7 @@ class ConversionRepository extends WireData {
 	 * @return ConversionDefinition
 	 * @throws MeasurementInvalidUnitException
 	 */
-	public function getConversion(string $unit): ConversionDefinition {
+	public function getConversion($unit): ConversionDefinition {
 		if(!$this->unitExists($unit)) {
 			throw new MeasurementInvalidUnitException(sprintf(__('Unit %1$s is not defined for quantity %2$s.'), $unit, $this->quantity));
 		}

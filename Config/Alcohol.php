@@ -16,25 +16,31 @@ namespace MetaTunes\MeasurementClasses {
 
 		'notes' => __("The base unit for alcohol content is % alcohol by volume, subjected to an upper limit of 100% and a lower limit of 0%. All measurements are at 20°C"),
 
-		'base' => 'ABV',
+		'base' => 'ABV proportion',
 		'units' => array(
-			"ABV"  => array(
+			"ABV proportion"  => array(
+				"alias" => __("proportion of alcohol by volume"),
+				"shortLabel" => __("ABV"),
+				"conversion" => 1,
+				"plural" => __("proportion of alcohol by volume"),
+			),
+			"ABV percent"  => array(
 				"alias" => __("% alcohol by volume"),
 				"shortLabel" => __("%ABV"),
-				"conversion" => 1,
+				"conversion" => 1/100,
 				"plural" => __("% alcohol by volume"),
 			),
-			"ABW" => array(
+			"ABW percent" => array(
 				"alias" => __("% alcohol by weight"),
 				"shortLabel" => __("%ABW"),
 				"conversion" => function($val, $toFrom) {
 					if($toFrom) {
 						$mixtureDensity = ($val < 7) ? (($val - 5) / (989.3 -991.9)) + 991.9 : (($val - 7) / (985.7 - 989.3)) + 989.3;
-						return $val * (789.2 / $mixtureDensity);
+						return 0.01 * $val * (789.2 / $mixtureDensity);
 					} else {
 						$firstGuess = $val * (990 / 789.2);
 						$mixtureDensity = ($firstGuess < 7) ? (($firstGuess - 5) / (989.3 -991.9)) + 991.9 : (($firstGuess - 7) / (985.7 - 989.3)) + 989.3;
-						return $val * ($mixtureDensity / 789.2);
+						return 0.01 * $val * ($mixtureDensity / 789.2);
 					}
 				},
 				"plural" => __("% alcohol by weight"),
@@ -46,5 +52,5 @@ namespace MetaTunes\MeasurementClasses {
 			)
 	);
 
-} // end of Processwire namespace
+}
 

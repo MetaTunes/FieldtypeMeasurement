@@ -1,5 +1,5 @@
 <?php namespace ProcessWire;
-use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
+use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension, MeasurementException};
 
 /**
  * ProcessWire Button Inputfield
@@ -31,7 +31,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.7',
+            'version' => '0.0.9',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement")
         );
@@ -72,6 +72,7 @@ class InputfieldMeasurement extends Inputfield {
      *
      */
     public function init() {
+		$this->wire()->config->scripts->append("https://unpkg.com/htmx.org@1.7.0");
 		parent::init();
 	}
 
@@ -83,28 +84,55 @@ class InputfieldMeasurement extends Inputfield {
 	 * @throws WirePermissionException
 	 */
     public function ___render() {
+		########### Get basic details ########################
 		$name = $this->attr('name');
 		$field = $this->field;
 		$page = $this->page;
-//		bd($this->attr('value'), 'value in render 0');
+
+		//todo somehow if($page->$field->collapsed == 7) return $page->$field->render(); ?
+
+		//bd($this->attr('value'), __METHOD__ . ': $value at line #' . __LINE__);
 		$value = $this->attr('value');
 		if(!$value || !$value->quantity){
 			$value = new Measurement($field->quantity);
-			//bd($value, 'value');
-		}
 
-		//bd($value->get('quantity'), 'quantity');
-		//bd($value->get('units'), 'units');
-		//bd($value->get('unit'), 'unit');
-//		bd($value->get('notes'), 'notes');
+		}
+		//bd($this->attr('value'), __METHOD__ . ': $value at line #' . __LINE__);
+
+		##################### HTMX AJAX LISTENER #############################
+		$input = $this->wire('input');
+		$ajax = $this->wire('config')->ajax;
+		// bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
+		 //bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
+		if ($ajax && str_starts_with($input->get('fieldName'), $this->attr('name'))) {
+			//bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
+			//bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
+			//bd($input->get('id'), __METHOD__ . ': $input->get(id) at line #' . __LINE__);
+			$name = $input->get('fieldName');
+			$target = $input->get('target');
+			$target = urldecode($target);
+			$oldUnit =$value->get('unit');
+			$unitName = "{$name}_unit";
+			$newUnit = $input->$unitName;
+			//bd($oldUnit, 'old unit');
+			//bd($newUnit, 'new unit');
+			$out = $this->htmxConvert($target, $value, $newUnit);
+			echo $out;
+			die();
+		} else {
+			// @debug
+			//bd($ajax, __METHOD__ . ': $ajax - NO AJAX AND/OR WRONG INPUTFIELD - at line #' . __LINE__);
+		}
+		######################################## END OF HTMX LISTENER ##############################
+
 		$inputfields = new InputfieldFieldset();
-		$numberOfCols = 2;
-		if($field->show_update) $numberOfCols ++;
+
+		$numberOfCols = ($field->hide_magnitude) ? 1 : 2;
 		$colWidth = 100 / $numberOfCols;
 		$notes = $value->units->get('notes');
 		$units = $value->units->definitions;
 
-
+		#################### Populate individual fields - quantity, magnitude & units ###################
 		// quantity
 		if (!$field->hide_quantity) {
 			$f = $this->modules->get("InputfieldMarkup");
@@ -129,17 +157,40 @@ class InputfieldMeasurement extends Inputfield {
 
         // magnitude
 		//bd($value->get('magnitude'), 'magnitude 3');
+		if (!$field->hide_magnitude) {
+			$combi = false;
+			foreach($field->units as $unitOption) {
+				if(strpos($unitOption, '|')) {
+					$combi = true;
+					break;
+				}
+			}
+			if($combi) {
+				$f = $this->modules->get("InputfieldText");
+				$f->notes = __("Number or numbers separated by a 'pipe' | - e.g 2|3.4 (for combi units) ");
+				$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
+			} else {
+				$f = $this->modules->get("InputfieldText");
+				$f->notes = __("Numeric");
+				$f->precision = 6;
+				$f->attr('type', "number");
+				$f->attr('step', "any");
+				if($value->get('magnitude')) {
+					$magnitude = (is_array($value->get('magnitude'))) ? $value->get('magnitude')[0] : $value->get('magnitude');
+				} else {
+					$magnitude = null;
+				}
+			}
+			$f->label = $this->_("Magnitude");
+			$f->attr('name', "{$name}_magnitude");
 
-        $f = $this->modules->get("InputfieldText");
-        $f->label = $this->_("Magnitude");
-        $f->attr('name', "{$name}_magnitude");
-		$magnitude = (is_array($value->get('magnitude'))) ?  implode('|', $value->get('magnitude')) : $value->get('magnitude');
-        $f->attr('value', $magnitude);
-		$f->addClass('InputfieldMeasurement_magnitude');
+			$f->attr('value', $magnitude);
+			$f->addClass('InputfieldMeasurement_magnitude');
 //		$f->attr('placeholder', $value->get('unit'));
-		$f->notes = __("Number or numbers separated by a 'pipe' | - e.g 2|3.4 (for combi units) ");
-        $f->columnWidth = $colWidth;
-        $inputfields->add($f);
+			$f->columnWidth = $colWidth;
+			$inputfields->add($f);
+			$magnitudeHtml = $f->render();
+		}
 
 		// unit
 		$f = $this->modules->get("InputfieldSelect");
@@ -147,32 +198,102 @@ class InputfieldMeasurement extends Inputfield {
 		$f->attr('name', "{$name}_unit");
 		$f->attr('value', $value->get('unit'));
 		//bd($value, 'value');
+		//bd($field->units, '$field->units');
+		$first = true;
 		foreach($field->units as $unit) {
+			if(!$value->get('unit') && $field->set_default) {
+				if($first) {
+					$f->attr('value', $unit);
+					$first = false;
+				}
+			}
 			$shortLabel = (isset($units[$unit]) && isset($units[$unit]['shortLabel'])) ? $units[$unit]['shortLabel'] : null;
 			$alias = (isset($units[$unit]) && isset($units[$unit]['alias'])) ? $units[$unit]['alias'] : $unit;
 			if($shortLabel) $shortLabel = "($shortLabel)";
 			$f->addOption($unit, "$alias $shortLabel");
 			}
-		$f->notes = $units[$value->get('unit')]->notes;
+		if($value->unit) $f->notes = $units[$value->get('unit')]->notes;
 		$f->columnWidth = $colWidth;
+		if(!isset($field->enable_conversion)) $field->enable_conversion = 2; // Just in case, and covers the upgrade form old 'show_update' method
+		if (!$field->hide_magnitude && $value->unit &&  $field->enable_conversion != 0) {   // 'Always', 'Ask' or unassigned conversion options
+			#### add HTMX to do measurement conversion ####
+			$targetHtml = (isset($magnitudeHtml)) ? $magnitudeHtml : '<input>';  // should always be set
+			$targetHtml = urlencode($targetHtml);
+			$adminEditURL = $this->wire('config')->urls->admin . "page/edit/";
+			$adminEdit = "{$adminEditURL}?id={$this->page->id}&fieldName={$name}&target={$targetHtml}";
+			//bd($adminEdit, __METHOD__ . ': $adminEdit at line #' . __LINE__);
+			$target = "{$name}_magnitude";
+			$source = "{$name}_unit";
+			//bd($name, 'name used');
+			//bd($source, 'source used');
+			$f->attr([
+				'hx-get' => $adminEdit, // send get to InputfieldMeasurement - caught by HTMX AJAX LISTENER above
+				'hx-target' => "[name={$target}]", // our element to target with swap
+				'hx-swap' => 'outerHTML', // we'll swap the innerHTML (this is the default but it has never worked for me if not specified)
+				'hx-trigger' => 'change',
+				'hx-include' => "[name={$source}]"
+			]);
+			if($field->enable_conversion != 1) {  // 'Ask' or unassigned option
+				$f->attr('hx-confirm', $this->_("Convert measurement to selected units? (Null selection deletes magnitude)"));
+			}
+			//prevent selectize from hijacking the 'change' event (if SelectizeAll installed)
+			$f->addClass('no-selectize');
+			########## end of hx- attributes ########################
+		}
 		$inputfields->add($f);
 
-		//update box
-		if ($field->show_update) {
-			$f = $this->modules->get('InputfieldCheckbox');
-			$f->attr('name', "{$name}_update");
-			$f->label = __('Convert magnitude (on save) if unit changed');
-			$f->notes = __("If checked, the magnitude will automatically be converted on saving the page if the units have changed. It is reset to unchecked on each save/refresh.");
-			$f->attr('checked', '');
-			$f->columnWidth = $colWidth;
-			$inputfields->append($f);
+		
+		//remark
+		if ($field->show_remark) {
+			//bd($value->get('remark'), 'get remark');
+			$f = $this->modules->get('InputfieldTextArea');
+			$f->attr('name', "{$name}_remark");
+			$f->attr('value', $value->get('remark'));
+			$f->label = __('Remark');
+			$f->notes = __("Default rendering is as a tooltip");
+			$f->columnWidth = 100;
+			$f->collapsed = Inputfield::collapsedBlank;
+			$f->rows = 1;
+			$inputfields->add($f);
 		}
+		return $inputfields->render();
+	}
 
-        return $inputfields->render();
-    }
+	/**
+	 * Convert the old selected unit to the new one
+	 * Called by HTMX get
+	 *
+	 * @param $target
+	 * @param $value
+	 * @param $newUnit
+	 * @return array|string|string[]|null
+	 * @throws MeasurementException
+	 */
+	private function htmxConvert($target, $value, $newUnit) {
+		/* @var Measurement $value */
+		if($newUnit) {
+			$magnitude = $value->valueAs($newUnit);
+		} else {
+			$magnitude = '';
+		}
+		//bd($target, 'target before replace');
+		$re = '/value\=\".*\"/mU';
+		$target =  preg_replace($re, 'value="' . $magnitude . '"', $target);
+		//bd($target, 'target after replace');
+		return $target;
+	}
 
+	/**
+	 * Value to render if the inputfield is not editable (e.g. locked)
+	 *
+	 * @return string
+	 */
+	public function renderValue(): string {
+		$value = $this->attr('value');
+		return ($value) ? $value->render() : '';
+	}
 
-    /**
+	/**
      * This Inputfield is defined empty, if the magnitude field is not populated
      *
      * Used by the 'required' check to see if the field is populated.
@@ -181,13 +302,13 @@ class InputfieldMeasurement extends Inputfield {
      * @return bool
      *
      */
-	public function isEmpty() {
-		$value = $this->attr('value');
-		if(!$value->magnitude) return true;
+    public function isEmpty() {
+        $value = $this->attr('value');
+		if(!$value || !$value->magnitude) return true;
 		if(is_array($value->magnitude)) $value->magnitude = implode('|', $value->magnitude);
-		if(is_object($value) && !strlen("{$value->magnitude}")) return true;
-		return false;
-	}
+        if(is_object($value) && !strlen("{$value->magnitude}")) return true;
+        return false; 
+    }
 
     /**
      * Process the input from the given WireInputData (usually $input->get or $input->post), load and clean the value for use in this Inputfield.
@@ -200,6 +321,7 @@ class InputfieldMeasurement extends Inputfield {
 		try {
 			$name = $this->attr('name');
 			$value = $this->attr('value');
+			if(!is_a($value, 'MetaTunes\MeasurementClasses\Measurement')) return $this;
 			/* @var $value Measurement */
 			$old = clone $value; // Don't want $old to change when $value is altered
 			//bd($value, 'value at start of process input');
@@ -209,16 +331,19 @@ class InputfieldMeasurement extends Inputfield {
 				'magnitude' => "{$name}_magnitude",
 				'unit' => "{$name}_unit",
 				'quantity' => "{$name}_quantity",
-				'update' => "{$name}_update"
+				'update' => "{$name}_update",
+				'remark' => "{$name}_remark"
 			);
 
-			// loop inputs and set them if changed
+			$value->set('magnitude', [0]); // default to prevent errors if no input
+			// loop inputs and set them (  even if not changed - as magnitude format may be wrong)
 			foreach($input_names as $key => $name) {
 				//bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc');
-				if(isset($input->$name) && $value->get($key) != $input->$name) {
+				if(isset($input->$name)) {  // deleted  && $value->get($key) != $input->$name from condition
+					//bd($key, 'key');
 					if($key == 'magnitude') {
 						$input->$name = trim($input->$name);
-
+						if(!$input->$name) $input->$name = 0;
 						/*
 						 * Set the regex for the required pattern for the magnitude field
 						 */
@@ -249,20 +374,22 @@ class InputfieldMeasurement extends Inputfield {
 							$this->_("Did you mean to convert the value? If so, tick the 'convert' box.");
 						if(!preg_match($re, $input->$name)) throw new MeasurementException($msg);
 						// If OK, carry on!
-
+						//bd([$key, $input->$name], '$input->$name');
 						if(!is_numeric($input->$name)) {
 //							$magnitude = explode('|', $input->$name);
 //							$magnitude = array_filter($magnitude, 'is_numeric');
-							$magnitude = $this->sanitizer->magnitude($input->$name);
+							$magnitude = $this->sanitizer->magnitude($input->$name);  //added by hook in FieldtypeMeasurement
 							$value->set($key, $magnitude);
 						} else {
 							$value->set($key, [$input->$name]);
 						}
+						//bd($value->get('magnitude'), 'Magnitude0');
 					} else {
 						$value->set($key, $input->$name);
 					}
-					$this->trackChange('value');
+//					$this->trackChange('value');
 					//bd($this->getChanges());
+					//bd($value->get('magnitude'), 'Magnitude1');
 				}
 			}
 
@@ -270,8 +397,6 @@ class InputfieldMeasurement extends Inputfield {
 			//bd(['old' => $old, 'new' => $new], 'changes to field');
 			$oldUnit = $old->get('unit');
 			$newUnit = $new->get('unit');
-
-//			bd($value->get('magnitude'), 'Magnitude');
 //			bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
 //			bd($value->get('update'), 'update?');
 			if($oldUnit and $newUnit and $oldUnit != $newUnit and $value->get('update') == 1) {

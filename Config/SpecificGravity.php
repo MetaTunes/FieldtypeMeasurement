@@ -10,6 +10,8 @@
  * Thanks to FermCalc for these calculations: http://fermcalc.com/conversions/
  * but note that they omit to show the 5th coefficient in the Brix->SG calculation
  * (Correct formulae are at https://frinklang.org/fsp/colorize.fsp?f=Brix.frink)
+ *
+ * SG->ABV conversion is from Duncan/Acton Progressive winemaking, with minor tweak ($adj) by Claude Jolicoeur
  */
 
 /*
@@ -44,32 +46,36 @@ namespace MeasurementSpecificGravity {
 	function sgToBrix($sg) {
 		// Estimation function taken from
 		// http://en.wikipedia.org/wiki/Brix#Tables
-		$brix1 = 261.3 * (1 - 1 / $sg);
-		$brix2 = 261.3 * (1 - 1 / ($sg + 0.00001));
-		$sg1 = brixToSg($brix1);
-		$sg2 = brixToSg($brix2);
-		$blowOut = 0;
-		while(true) {
-			if(($sg2 - $sg1) == 0) return $brix1;
-			$invSlope = ($brix2 - $brix1) / ($sg2 - $sg1);
-			$bnew = $brix1 + ($sg - $sg1) * $invSlope;
-			$sgnew = brixToSg($bnew);
+		if($sg > 0) {
+			$brix1 = 261.3 * (1 - 1 / $sg);
+			$brix2 = 261.3 * (1 - 1 / ($sg + 0.00001));
+			$sg1 = brixToSg($brix1);
+			$sg2 = brixToSg($brix2);
+			$blowOut = 0;
+			while(true) {
+				if(($sg2 - $sg1) == 0) return $brix1;
+				$invSlope = ($brix2 - $brix1) / ($sg2 - $sg1);
+				$bnew = $brix1 + ($sg - $sg1) * $invSlope;
+				$sgnew = brixToSg($bnew);
 
-			if(abs($sgnew - $sg) < (float)'1e-8') {
-				return $bnew;
+				if(abs($sgnew - $sg) < (float)'1e-8') {
+					return $bnew;
+				}
+
+				$sg2 = $sg1;
+				$sg1 = $sgnew;
+				$brix2 = $brix1;
+				$brix1 = $bnew;
+				$blowOut++;
+				if($blowOut > 200) return $bnew;
 			}
-
-			$sg2 = $sg1;
-			$sg1 = $sgnew;
-			$brix2 = $brix1;
-			$brix1 = $bnew;
-			$blowOut++;
-			if($blowOut > 200) return $bnew;
+		} else {
+			return 0;
 		}
 	}
 
 	function sgToSugar($sg, $sfdeCorrection = 0) {
-		return (10 * $sg * sgToBrix($sg) * 0.9982) * (1 - $sfdeCorrection);
+		return ($sg * sgToBrix($sg) * 0.9982) * (1 - $sfdeCorrection);
 	}
 
 	function sugarToSg($sugar, $sfdeCorrection = 0) {
@@ -105,7 +111,7 @@ namespace MeasurementSpecificGravity {
 
 	function sgToAbv($sg, $sfdeCorrection = 0) {
 		$adj = ($sg - 1) * $sfdeCorrection; // $adj is the correction for non-sugar solutes (0.009 equiv to 82% $sfdeCorrection at SG 1.050) and is a source of inaccuracy
-		return (1000 * ($sg - 1)) / (7.75 - 3.75 * ($sg - 1 - $adj));
+		return (1000 * ($sg - 1) / (7.75 - 0.24 * ($sg - $adj - 1))); // Duncan and Acton has 3.75, not 0.24
 	}
 
 	function abvToSg($abv, $sfdeCorrection = 0) {
@@ -163,7 +169,7 @@ namespace MetaTunes\MeasurementClasses {
 	\n No conversion is given for estimated alcohol post fermentation. Just take the difference in SG and multiply by approx 128.
 	\n Note that the base unit is gravity points which can be added and subtracted and effectively have a dimension of 'substance amount'. Not all the units in this conversion have this dimension. 
 	The specific gravity index (e.g. 1.050) is effectively dimensionless and 'kilogram per litre' has a density dimension (mass / length cubed)."),
-		"dimension" => new Dimension([Dimension::SUBSTANCE_AMOUNT]),
+		"dimension" => new Dimension([Dimension::SUBSTANCE_AMOUNT => 1]),
 		'base' => 'gravity point',
 		'units' => array(
 			"gravity point" => array("shortLabel" => "°SG", "conversion" => 1),

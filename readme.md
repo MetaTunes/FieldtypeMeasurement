@@ -3,7 +3,7 @@ This fieldtype allows a measurement unit to be stored along with a corresponding
 The relevant details for the type of measurement are set in the Details tab of the field setup page. 
 The API permits various conversions and formatting.
 
-**Please note that this module is 'alpha' at the moment - it is mostly complete but needs more testing to check that it is robust. It is therefore not recommended using it for production sites.**
+**Please note that this module is 'beta' at the moment - it has all the planned functionality and has been tested in one environment (PW3.0.190). However, different PW versions, modules and your own code may affect it differently. It is therefore not recommended for use in production sites unless you have fully tested it in context first.**
 
 ## Set up
 The various units of measurement are defined in the module FieldtypeMeasurement/Config directory. 
@@ -23,20 +23,20 @@ Each file contains an array defining the applicable units of measure for this qu
 
 On the details tab of the field setup page, you define the quantity to be measured (i.e. the name of one of the config files) and select which of the units defined in the config file are to be allowed as input choices. In addition you can choose:
 * to hide the quantity and notes text in the input field;
-* to show an 'update' (convert magnitude) box - if this is shown and checked before saving the page then, if the units have been changed, the magnitude of the measurement will be converted into the new units (see below).
+* to enable the magnitude value to be automatically updated when you change the unit selection in a field - the options are to 'Always' convert, to 'Never' convert or to 'Ask' whether or not to convert each time the unit selection is changed (note that, if conversion is chosen and the unit is changed to no selection then the magnitude value will be blanked);
+* to hide the magnitude box - this might be, for example, if you want to use the field just to choose a default unit (obviously if this is chosen then the conversion option is irrelevant);
+* to show a 'remark' box - if selected, the contents of any box will be rendered, by default, as a tooltip, indicated by a dotted line under the rendered value in the front end.
 
 ## Usage on a page
 Having added the field to a template, related pages then display a fieldset with:
 * quantity and notes (not editable here) unless this was set as hidden;
-* magnitude;
+* magnitude (unless you chose to hide it);
 * unit (dropdown);
-* 'convert magnitude' checkbox (if set to be shown).
+* 'remark' box (if set to be shown).
 
-If the 'convert magnitude' box is not checked, just set the magnitude and units as appropriate and save the page.
+When rendering the page, the normal formatted value will be the measurement value followed by the abbreviation ('shortLabel' in the config file). This format can be changed (see API section). If there is a 'remark' it will be shown as a tooltip unless a different formatting option is chosen. 
 
-If the 'convert magnitude' box is checked and the units have been changed then the magnitude will automatically be converted on saving the page (unless the new or old units is blank), so in this case set the magnitude first in the old units, then change the units, then save the page. After saving, the 'convert magnitude' box will be unchecked.
-
-When rendering the page, the normal formatted value will be the measurement value followed by the abbreviation ('shortLabel' in the config file). This format can be changed (see API section).
+If no unit is selected, the measurement will not be rendered (but any remark will still be shown).
 
 ### Combination units
 Some units are "combinations" - in other words, two or more units combined - e.g. feet and inches. These are defined using the pipe "|" join. When entering a value, it is necessary to enter the required number of values joined with a "|". Thus, for 2 feet 3 inches, enter "2|3" where the selected unit is "foot|inch". If the format of the magnitude is inconsistent with the chosen units an error will be thrown. If "convert magnitude" is selected then the magnitude needs to be consistent with the previous unit chosen - conversion to the correct format for the new unit is automatic.
@@ -48,7 +48,7 @@ The field can be used in selectors in the usual way, e.g. if the field is 'tempe
 ````
 $pages->find("template=my_template, temperature.unit=Celsius, temperature.magnitude>20");
 ````
-Note that temperature.magnitude is the value in whatever unit is currently selected for the field on each page - which is why temperature.unit has been specified to ensure a consistent search. You can select regardless of the units by using .baseMagnitude because the database stores the magnitude in the base unit as well as in the current unit, so: 
+Note that temperature.magnitude is the value in whatever unit is currently selected for the field on each page - which is why temperature.unit has been specified, in the above example, to ensure a consistent search. You can select regardless of the units by using .baseMagnitude because the database stores the magnitude in base unit amounts as well as in current unit amounts, so: 
 
 ````$pages->find("template=my_template, temperature.baseMagnitude>293");````
 
@@ -73,14 +73,15 @@ The following methods are available for Measurement objects. (Note that, if you 
     ````
         $defaultOptions = [
             'label' => 'short', // 'short', 'shortPadded' (with space to separate from magnitude), 'long', 'none'
-            'position' => 'append', // 'append' - after the magnitude, 'prepend' - before the magnitude (only applies to shortLabels.
-            'decimals' => null,
+            'position' => 'append', // 'append' - after the magnitude, 'prepend' - before the magnitude (only applies to shortLabels.)
+            'decimals' => null, // positive integer number of places
             'round' => true, // otherwise value will be truncated
             'join' => [' '], // an array for joining characters for combi units (one less element than the number of units in the combi) - e.g. [' and ']
-            'skipNil' => true,
+            'skipNil' => true, // for combi units, do not render nil amounts, other than the last
             'alias' => $unit,
             'notes' => null,
-            'plural' => null
+            'plural' => null,
+				'remark' => 'tooltip' // how to display any contents of the 'remark' box: as 'tooltip', 'before' the value, 'after' the value, or 'none' (do not display)
         ];
     ````
    'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. 'position' determines the location of the shortLabel (before or after the magnitude). Long names will always be after the magnitude and preceded by a space. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.
@@ -94,7 +95,7 @@ The following methods are available for Measurement objects. (Note that, if you 
     ````
   results in something like: '1 foot and 3.4 inches'. Note that the number of elements in the join array is one less than the number of elements in the combination unit - i.e. there is no 'join' string after the last element (any excess elements will be ignored and  a shortfall will just result in concatenation). The 'skipNil' option, if true, will cause any leading elements to be suppressed - so '1 inch' not '0 feet 1 inch'. The last element will always be displayed. 
   
-* *render(?array $options = [])*: Render the measurement using default or specified options. $options are as for format() above and will temporarily over-ride any previous setting by format().
+* *render(?array $options = [])*: Render the measurement using default or specified options. $options are as for format() above and will temporarily over-ride any previous setting by format(). This method is hookable, so you can replace it completely with your own method, if required. 
 
 * *valueAs(string $unit, ?int $decimals = null, ?bool $round = true)*: Returns the magnitude converted to the specified unit (or an error if the specified unit does not exist or is not compatible).
   Rounds (or truncates) the value to the specified number of decimal places (if given).
@@ -222,7 +223,7 @@ If it is more complex then a callback can be used. E.g. add Fahrenheit to the Te
     }, 
     "plural" => "Fahrenheit"]
 ````
-If you a defining a complex conversion for use in addUnit() then define the callback as a variable first then include it as the conversion argument. (This is because you cannot store anonymous functions in session variables.)
+If you are defining a complex conversion for use in addUnit() then define the callback as a variable first then include it as the conversion argument. (This is because you cannot store anonymous functions in session variables.)
 E.g.
 
 ````
@@ -280,9 +281,10 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 
 ### Currencies
 
-An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
+An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for real financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
 
  # Changelog
+ * 0.0.8 added 'remark' box to be rendered as tooltip, if present
  * 0.0.7 new namespaces, refactoring and extended dimensions
  * 0.0.6 minor fixes and new Measurement methods
  * 0.0.5 allowed specific formats in config file, additional units, dimensional analysis supported
