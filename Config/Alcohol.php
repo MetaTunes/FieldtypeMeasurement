@@ -35,8 +35,8 @@ namespace MetaTunes\MeasurementClasses {
 				"shortLabel" => __("%ABW"),
 				"conversion" => function($val, $toFrom) {
 					if($toFrom) {
-						$mixtureDensity = ($val < 7) ? (($val - 5) / (989.3 -991.9)) + 991.9 : (($val - 7) / (985.7 - 989.3)) + 989.3;
-						return 0.01 * $val * (789.2 / $mixtureDensity);
+						$mixtureDensity = ($val < .07) ? (($val - .05) / (989.3 -991.9)) + 991.9 : (($val - .07) / (985.7 - 989.3)) + 989.3;
+						return 100 * $val * (789.2 / $mixtureDensity);
 					} else {
 						$firstGuess = $val * (990 / 789.2);
 						$mixtureDensity = ($firstGuess < 7) ? (($firstGuess - 5) / (989.3 -991.9)) + 991.9 : (($firstGuess - 7) / (985.7 - 989.3)) + 989.3;

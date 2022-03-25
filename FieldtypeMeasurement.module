@@ -18,7 +18,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.9
+ * @version 0.0.10
+ * @since 0.0.9 bug fixes and enhancements to in-field conversion
  * @since 0.0.8 changed in-field conversion method to use htmx rather than forcing save, plus numerous bug fixes
  * @since 0.0.7 added 'note' box to be rendered as tooltip, if present
  * @since 0.0.6 new namespaces, refactoring and extended dimensions
@@ -110,7 +111,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.8',
+			'version' => '0.0.10',
             'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
             'installs' => 'InputfieldMeasurement',
