@@ -39,7 +39,7 @@ When rendering the page, the normal formatted value will be the measurement valu
 If no unit is selected, the measurement will not be rendered (but any remark will still be shown).
 
 ### Combination units
-Some units are "combinations" - in other words, two or more units combined - e.g. feet and inches. These are defined using the pipe "|" join. When entering a value, it is necessary to enter the required number of values joined with a "|". Thus, for 2 feet 3 inches, enter "2|3" where the selected unit is "foot|inch". If the format of the magnitude is inconsistent with the chosen units an error will be thrown. If "convert magnitude" is selected then the magnitude needs to be consistent with the previous unit chosen - conversion to the correct format for the new unit is automatic.
+Some units are "combinations" - in other words, two or more units combined - e.g. feet and inches. These are defined using the pipe "|" join. When entering a value, it is necessary to enter the required number of values joined with a "|". Thus, for 2 feet 3 inches, enter "2|3" where the selected unit is "foot|inch". If the format of the magnitude is inconsistent with the chosen units an error will be thrown. If the unit is changed, conversion to the correct format for the new unit is automatic.
 
 When rendering the page, the normal formatted value will be the first measurement value followed by the first abbreviation ('shortLabel' in the config file), then the second (after a space) etc. This format can be changed (see API section).
 
@@ -284,6 +284,8 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for real financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
 
  # Changelog
+ * 0.0.10 bug fixes and enhancements to in-field conversion
+ * 0.0.9 changed in-field conversion method to use htmx rather than forcing save, plus numerous bug fixes
  * 0.0.8 added 'remark' box to be rendered as tooltip, if present
  * 0.0.7 new namespaces, refactoring and extended dimensions
  * 0.0.6 minor fixes and new Measurement methods
