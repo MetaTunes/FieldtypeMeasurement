@@ -284,6 +284,7 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for real financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it.
 
  # Changelog
+ * 0.0.11 bug fixes to in-field conversion
  * 0.0.10 bug fixes and enhancements to in-field conversion
  * 0.0.9 changed in-field conversion method to use htmx rather than forcing save, plus numerous bug fixes
  * 0.0.8 added 'remark' box to be rendered as tooltip, if present
