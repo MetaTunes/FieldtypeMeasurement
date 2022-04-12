@@ -14,7 +14,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension, Measu
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
- * @version 0.0.10
+ * @version 0.0.11
+ * @since 0.0.10 bug fixes to in-field conversion
  * @since 0.0.9 bug fixes and enhancements to in-field conversion
  * @since 0.0.8 changed in-field conversion method to use htmx rather than forcing save, plus numerous bug fixes
  * @since 0.0.7 added 'note' box to be rendered as tooltip, if present
@@ -34,7 +35,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.10',
+            'version' => '0.0.11',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement")
         );
@@ -90,6 +91,7 @@ class InputfieldMeasurement extends Inputfield {
     public function ___render() {
 		########### Get basic details ########################
 		$name = $this->attr('name');
+		//bd($name, 'inputfield name');
 		$field = $this->field;
 		$page = $this->page;
 
@@ -109,7 +111,7 @@ class InputfieldMeasurement extends Inputfield {
 		##################### HTMX AJAX LISTENER #############################
 		$input = $this->wire('input');
 		$ajax = $this->wire('config')->ajax;
-		// bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
+		 //bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
 		 //bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
 		if ($ajax && str_starts_with($input->get('fieldName'), $this->attr('name'))) {
 			//bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
@@ -192,9 +194,27 @@ class InputfieldMeasurement extends Inputfield {
 			}
 		if($value->unit) $f->notes = $units[$value->get('unit')]->notes;
 		$f->columnWidth = $colWidth;
-		if(!isset($field->enable_conversion)) $field->enable_conversion = 2; // Just in case, and covers the upgrade form old 'show_update' method
-		$this->wire->config->js('InputfieldMeasurement', ['enable_conversion' => $field->enable_conversion]);
-		if (!$field->hide_magnitude && $field->enable_conversion != 0) {   // 'Always', 'Ask' or unassigned conversion options
+
+		######### Set the js variables to handle in-field conversion #############
+		if(!isset($field->enable_conversion)) $field->enable_conversion = 2; // Just in case, and covers the upgrade from old 'show_update' method
+
+		if(!$this->wire->config->js('InputfieldMeasurement')) {
+			$this->wire->config->js('InputfieldMeasurement', ['enable_conversion_Inputfield_' . $name . '_unit' => $field->enable_conversion,  // This sets the var name to be enable_conversion_ suffixed by the inputfield id
+				'confirm' => $this->_("Convert measurement to selected units? (Null selection deletes magnitude")]);
+		} else {
+			$this->wire->config->js('InputfieldMeasurement', array_merge($this->wire->config->js('InputfieldMeasurement'), ['enable_conversion_Inputfield_' . $name . '_unit' => $field->enable_conversion]));
+		}
+		// Note that the browser will not get the js vars if the inputfield has been 'lazy-loaded' by AJAX, so we need to set it directly with a script
+		// (This is borrowed from InputfieldRepeater.module)
+		if($ajax) {
+			$jsValue = $this->wire->config->js('InputfieldMeasurement');
+			if(!empty($jsValue)) {
+				$f->appendMarkup .= "<script>ProcessWire.config['InputfieldMeasurement'] = " . json_encode($jsValue) . ';</script>';
+			}
+		}
+		########################
+
+		if(!$field->hide_magnitude && $field->enable_conversion != 0) {   // 'Always', 'Ask' or unassigned conversion options
 			#### add HTMX to do measurement conversion ####
 			$targetHtml = (isset($magnitudeHtml)) ? $magnitudeHtml : '<input>';  // should always be set
 			$targetHtml = urlencode($targetHtml);

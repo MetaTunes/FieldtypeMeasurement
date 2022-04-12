@@ -45,11 +45,12 @@ $(document).on('reloaded', '.InputfieldRepeater', function (event) {
 *Only trigger the Ajax call if there is an old value to convert from and the field settings require it
  ******************/
 $(document).on('change', '.InputfieldMeasurement select', function(event) {
-    var enable_conversion = ProcessWire.config.InputfieldMeasurement.enable_conversion;
+    var pwConfig = ProcessWire.config.InputfieldMeasurement;
+    var enable_conversion = pwConfig['enable_conversion_' + this.id];
     console.log(enable_conversion, 'convert?');
     // enable_conversion: 0 = never convert, 1 = always convert, 2 = ask
     if (getOldUnit(this)) {
-        if ((enable_conversion === 1) || (enable_conversion === 2 && confirm("Convert measurement to selected units? (Null selection deletes magnitude"))) htmx.trigger(this, 'confirmed');
+        if ((enable_conversion === 1) || (enable_conversion === 2 && confirm(ProcessWire.config.InputfieldMeasurement.confirm))) htmx.trigger(this, 'confirmed');
     }
 });
 
