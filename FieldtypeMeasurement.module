@@ -641,7 +641,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 				$f->addOption($key, "$alias $shortLabel");
 			}
 			$f->value = $field->get('units');
-			bd($f, 'Unit select field');
+			//bd($f, 'Unit select field');
 			$fs->append($f);
 
 			$f = $this->modules->get('InputfieldCheckbox');
