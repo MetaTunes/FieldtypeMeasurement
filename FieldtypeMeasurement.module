@@ -165,7 +165,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			$this->wire()->config->scripts->append($js);
 		}
 		parent::init();
-		bd('init done');
+		//bd('init done');
 
 	}
 
@@ -678,7 +678,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			$fs->append($f);
 
 		}
-		bd($fs, 'unit_set');
+		//bd($fs, 'unit_set');
 		return $fs;
 	}
 
