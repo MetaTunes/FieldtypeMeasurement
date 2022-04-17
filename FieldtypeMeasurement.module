@@ -1,10 +1,11 @@
 <?php namespace ProcessWire;
+
 use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
 
 /**
  * ProcessWire Measurement Fieldtype
  *
-*
+ *
  * Field that stores 4 values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and value (in base units and the specified units).
  * Define quantity and unit options field settings. These may be different in different template contexts.
  *
@@ -18,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.11
+ * @version 0.0.12
+ * @since 0.0.11 interactive dependent select in config, bug fixes
  * @since 0.0.10 bug fixes to in-field conversion
  * @since 0.0.9 bug fixes and enhancements to in-field conversion
  * @since 0.0.8 changed in-field conversion method to use htmx rather than forcing save, plus numerous bug fixes
@@ -47,8 +49,6 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  * @property string $invalidUnits
  *
  */
-
-
 class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 
 
@@ -63,25 +63,54 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	}
 
 	/**
-	 * Create a Measurement object for API usage
-	 * E.g. Get the module: ````$mm = $modules->get('FieldtypeMeasurement');````
-	 * then use this to construct a new measurement: ````$measure = $mm->measurement();````
-	 * The arguments may be null and set later, but errors may occur if using methods for objects without all properties set. Use set and get thus:
-	````
-	$measurement->set('quantity', 'Area');
-	$measurement->get('quantity');
-	````
-	 * For combination units, the magnitude must be an array or a string of numbers with pipe joins, e.g. '2|3.5'
+	 * Adds the unit as a selectable item in the given field
+	 * If $template is given, save the field in that context only
 	 *
-	 * @see MetaTunes\MeasurementClasses\Measurement::__construct
-	 *
-	 * @param string|null $quantity
-	 * @param string|null $unit
-	 * @param null $magnitude
-	 * @return Measurement
+	 * @param string $field
+	 * @param string $unit
+	 * @param string|null $template
+	 * @throws WireException
 	 */
-	public function measurement(?string $quantity = null, ?string $unit = null, $magnitude = null, $note = null) {
-		return new Measurement($quantity, $unit, $magnitude, $note);
+	public static function addSelectableUnit(string $field, string $unit, ?string $template = null) {
+		$f = wire()->fields->get($field);
+		if($template) $f = $f->getContext($template);
+		$units = $f->get('units');
+		if(!$units || !in_array($unit, $units)) $units[] = $unit;
+		$f->set('units', $units);
+		if($template) {
+			$template = wire()->templates->get($template);
+			wire()->fields->saveFieldgroupContext($f, $template->fieldgroup);
+			$template->save();
+		} else {
+			$f->save();
+		}
+	}
+
+	/**
+	 * Removes the unit as a selectable item in the given field
+	 * If $template is given, remove the field in that context only
+	 *
+	 * @param string $field
+	 * @param string $unit
+	 * @param string|null $template
+	 * @throws WireException
+	 */
+	public static function removeSelectableUnit(string $field, string $unit, ?string $template = null) {
+		$f = wire()->fields->get($field);
+		if($template) $f = $f->getContext($template);
+		$units = $f->get('units');
+		if(in_array($unit, $units)) {
+			$key = array_search($unit, $units);
+			unset($units[$key]);
+		}
+		$f->set('units', $units);
+		if($template) {
+			$template = wire()->templates->get($template);
+			wire()->fields->saveFieldgroupContext($f, $template->fieldgroup);
+			$template->save();
+		} else {
+			$f->save();
+		}
 	}
 
 	public function baseMeasurement($magnitude = null, $dimension = null) {
@@ -106,28 +135,20 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	}
 
 	/**
-	 * @return array
-	 */
-	public static function getModuleInfo(): array {
-		return array(
-			'title' => __('Measurement', __FILE__), // Module Title
-			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.11',
-            'author' => 'Mark Evens',
-			'requires' => ['ProcessWire>=3.0.148'],
-            'installs' => 'InputfieldMeasurement',
-'autoload' => true,  // required so that ready() method runs
-        );
-    }
-
-	/**
 	 * Initialize this Fieldtype
 	 *
 	 */
 	public function init() {
+		$info = $this->getModuleInfo();
+		$version = $info['version'];
+		$config = $this->wire()->config;
+		$ajax = wire('config')->ajax;
+		$this->wire()->config->scripts->append("https://unpkg.com/htmx.org@1.7.0");
+		$css = $config->urls->$this . "{$this}.css?v=$version";
+		$this->wire()->config->styles->append($css);
 		$this->invalidUnits = __('This unit is not valid for the quantity type of this field. Resetting value to zero.');
 
-	// magnitudes must be numbers, arrays of numbers or numbers separated by pipe | symbols
+		// magnitudes must be numbers, arrays of numbers or numbers separated by pipe | symbols
 		// The sanitizer will return an array of floats
 		$this->wire()->sanitizer->addHook('magnitude', function(HookEvent $event) {
 			$sanitizer = $event->object;
@@ -139,15 +160,20 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			}
 			$event->return = $value;
 		});
+		if(!$ajax) {
+			$js = $config->urls->$this . "{$this}.js?v=$version";
+			$this->wire()->config->scripts->append($js);
+		}
 		parent::init();
-	}
-	
-	public function ready() {
-	
-/* Hook to add module css to any front-end page
-NB must be in ready() not init()
- */
+		bd('init done');
 
+	}
+
+	public function ready() {
+
+		/* Hook to add module js and css to any front-end page
+		NB must be in ready() not init()
+		 */
 		wire()->addHookAfter('Page::render', function(HookEvent $event) {
 			$page = $event->object;
 			// don't add this to the admin pages
@@ -181,23 +207,87 @@ NB must be in ready() not init()
 			//bd($return, 'return in hook');
 			if($f->type == 'FieldtypeMeasurement') $event->return = html_entity_decode($return);
 		});
+
+		/*
+		 * This hook is to process htmx attributes on change of quantity - to update the DOM with the new units info
+		 */
+		$this->wire()->addHookAfter('ProcessField::buildEditForm', function(HookEvent $event) {
+			$object = $event->object;
+			$field = $object->getField();
+			if(!$field || !$field->id || !$field->quantity) {
+				$this->session()->set('newField', true);
+			}
+			##################### HTMX LISTENER #############################
+			$input = wire('input');
+			$ajax = wire('config')->ajax;
+			if($ajax && $input->get('refresh') == 1) {
+				$quantity = $input->get('quantity');
+				$fs = $this->unitSet($quantity, $field);
+				$inputfields = parent::___getConfigInputfields($field);
+				$inputfields->append($fs);
+				/*
+				 * In order to render AsmSelect and Toggle fields, we need to make sure the js and css is present
+				 */
+				// AsmSelect //
+				$js1 = $this->config->urls->modules . "Inputfield/InputfieldAsmSelect/asmselect/jquery.asmselect.js";
+				$out = "<script src='{$js1}'></script>";
+				$js2 = $this->config->urls->modules . "Inputfield/InputfieldAsmSelect/InputfieldAsmSelect.js";
+				$out .= "<script src='{$js2}'></script>";
+				$css1 = $this->config->urls->modules . "Inputfield/InputfieldAsmSelect/asmselect/jquery.asmselect.css";
+				$out .= "<link rel='stylesheet' href='{$css1}'/>";
+				$css2 = $this->config->urls->modules . "Inputfield/InputfieldAsmSelect/InputfieldAsmSelect.css";
+				$out .= "<link rel='stylesheet' href='{$css2}'/>";
+				// Toggle // We only want to add this for new fields as it persists afterwards
+				if($this->session()->get('newField')) {
+					$js3 = $this->config->urls->modules . "Inputfield/InputfieldToggle/InputfieldToggle.js";
+					$out .= "<script src='{$js3}'></script>";
+					$css3 = $this->config->urls->modules . "Inputfield/InputfieldToggle/InputfieldToggle.css";
+					$out .= "<link rel='stylesheet' href='{$css3}'/>";
+					$this->session->remove('newField');
+					// newField session var is removed in save hook below
+				}
+				// Finally we can render the html to be swapped into 'unit_set'
+				$out .= $inputfields->render();
+				echo $out;
+				die();
+			}
+		});
+
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getModuleInfo(): array {
+		return array(
+			'title' => __('Measurement', __FILE__), // Module Title
+			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
+			'version' => '0.0.12',
+			'author' => 'Mark Evens',
+			'requires' => ['ProcessWire>=3.0.148'],
+			'installs' => 'InputfieldMeasurement',
+			'requiredBy' => 'InputfieldMeasurement',
+			'autoload' => true,  // required so that ready() method runs
+			'icon' => 'balance-scale',
+		);
 	}
 
 	/**
 	 * Format value for output
 	 * See Measurement::format() for details of format options
-	 * @see MetaTunes\MeasurementClasses\Measurement::format()
 	 *
 	 * @param Page $page
 	 * @param Field $field
 	 * @param int|object|string $value
 	 * @return int|mixed|object|string|null
+	 * @see MetaTunes\MeasurementClasses\Measurement::format()
+	 *
 	 */
 	public function ___formatValue(Page $page, Field $field, $value) {
 		//bd($value, 'value in formatValue 1');
 		if(!$value instanceof Measurement) return null;
 
-       //bd($value, 'value in formatValue 2');
+		//bd($value, 'value in formatValue 2');
 		return $value->render();
 	}
 
@@ -278,8 +368,8 @@ NB must be in ready() not init()
 			} else {
 				$measurement->unit = $measurement->units->base;
 				$this->error(sprintf($this->_(
-					'The previously saved unit (%1$s) is not (or no longer) compatible with this quantity (%2$s). Perhaps a changed config file? Value is shown as base units.'),
-					$value['unit'], $measurement->quantity) . ($this->_("\nThe best way to fix this may be to save the base unit value shown and then convert to the required unit.")));
+						'The previously saved unit (%1$s) is not (or no longer) compatible with this quantity (%2$s). Perhaps a changed config file? Value is shown as base units.'),
+						$value['unit'], $measurement->quantity) . ($this->_("\nThe best way to fix this may be to save the base unit value shown and then convert to the required unit.")));
 			}
 		} else {
 			$measurement->unit = null;
@@ -292,21 +382,21 @@ NB must be in ready() not init()
 		// get the current shortLabel and plural from the config file - not a saved version
 		if($measurement->unit and $measurement->quantity) {
 			$units = $measurement->getUnits();
-				foreach($units[$measurement->unit] as $key => $item) {
-					if($key == 'conversion') continue;
-					if(isset($units[$measurement->unit][$key])) {
-						$measurement->set($key, $item);
-					} else {
-						if($measurement->get($key)) $measurement->remove($key);
-					}
+			foreach($units[$measurement->unit] as $key => $item) {
+				if($key == 'conversion') continue;
+				if(isset($units[$measurement->unit][$key])) {
+					$measurement->set($key, $item);
+				} else {
+					if($measurement->get($key)) $measurement->remove($key);
 				}
+			}
 			if($this->unit and !is_null($this->magnitude)) {
 				$this->convertFrom($this->magnitude, $this->unit);
 			}
 		}
 		if(isset($value['note'])) $measurement->remark = $value['note'];
-		 $measurement->resetTrackChanges();
-//		bd($measurement, 'measurement2 in ___wakeupValue'); //debug
+		$measurement->resetTrackChanges();
+		//bd($measurement, 'measurement2 in ___wakeupValue'); //debug
 		return $measurement;
 	}
 
@@ -322,7 +412,7 @@ NB must be in ready() not init()
 		$context = ($page && $page->id) ? $field->getContext($page->template) : $field;
 		/* @var $context FieldtypeMeasurement */
 		$measurement = new Measurement($context->quantity, null, []);
-		if ($context->quantity) $measurement->set('quantity', $context->quantity);
+		if($context->quantity) $measurement->set('quantity', $context->quantity);
 		$measurement->set('magnitude', []);
 		$measurement->set('remark', null);
 		$measurement->set('shortLabel', null);
@@ -418,8 +508,8 @@ NB must be in ready() not init()
 	 * Method called when the field is database-queried from a selector
 	 * For Measurement objects, the baseMagnitude setting is stored in the DB as 'data'
 	 *
-	 * @see Fieldtype::getMatchQuery()
 	 * @throws WireException
+	 * @see Fieldtype::getMatchQuery()
 	 */
 	public function getMatchQuery($query, $table, $subfield, $operator, $value) {
 		// If searching 'magnitude' then assume our default (data) field
@@ -428,70 +518,20 @@ NB must be in ready() not init()
 	}
 
 	/**
-	 * Adds the unit as a selectable item in the given field
-	 * If $template is given, save the field in that context only
-	 *
-	 * @param string $field
-	 * @param string $unit
-	 * @param string|null $template
-	 * @throws WireException
-	 */
-	public static function addSelectableUnit(string $field, string $unit, ?string $template = null) {
-		$f = wire()->fields->get($field);
-		if($template) $f = $f->getContext($template);
-		$units = $f->get('units');
-		if(!$units || !in_array($unit, $units)) $units[] = $unit;
-		$f->set('units', $units);
-		if($template) {
-			$template = wire()->templates->get($template);
-			wire()->fields->saveFieldgroupContext($f,$template->fieldgroup);
-			$template->save();
-		} else {
-			$f->save();
-		}
-	}
-
-	/**
-	 * Removes the unit as a selectable item in the given field
-	 * If $template is given, remove the field in that context only
-	 *
-	 * @param string $field
-	 * @param string $unit
-	 * @param string|null $template
-	 * @throws WireException
-	 */
-	public static function removeSelectableUnit(string $field, string $unit, ?string $template = null) {
-		$f = wire()->fields->get($field);
-		if($template) $f = $f->getContext($template);
-		$units = $f->get('units');
-		if(in_array($unit, $units)) {
-			$key = array_search($unit, $units);
-			unset($units[$key]);
-		}
-		$f->set('units', $units);
-		if($template) {
-			$template = wire()->templates->get($template);
-			wire()->fields->saveFieldgroupContext($f,$template->fieldgroup);
-			$template->save();
-		} else {
-			$f->save();
-		}
-	}
-
-	/**
 	 * Get any inputfields used for configuration of this Fieldtype.
 	 * This is in addition any configuration fields supplied by the parent Inputfield.
 	 *
-	 * @see Inputfield::getConfigInputfields()
 	 * @param Field $field
 	 * @return InputfieldWrapper
 	 *
 	 * @throws WirePermissionException
+	 * @see Inputfield::getConfigInputfields()
 	 */
 	public function ___getConfigInputfields(Field $field): InputfieldWrapper {
 		/* @var $field \ProcessWire\FieldtypeMeasurement */
 		$inputfields = parent::___getConfigInputfields($field);
-
+		$input = $this->wire('input');
+		if($input->post('quantity')) $field->set('quantity', $input->post('quantity'));
 		$f = $this->modules->get("InputfieldSelect");
 		$quantities = Measurement::getQuantities();
 		$f->label = __("Quantity");
@@ -499,11 +539,25 @@ NB must be in ready() not init()
 		$f->name = $f_name;
 		$f->columnWidth = 50;
 		$f->description = __("Type of physical quantity to be measured.");
-		$f->notes = __("Save after changing to see the options for units applicable to this quantity.");
+		//$f->notes = __("Save after changing to see the options for units applicable to this quantity."); // No longer necessary with htmx
 		foreach($quantities as $quantity) {
 			$f->addOption($quantity);
 		}
 		$f->value = $field->get('quantity');
+
+		#### add HTMX to change the units selection ####
+		$adminEditURL = $this->wire('config')->urls->admin . "setup/field/edit/";
+		$adminEdit = "{$adminEditURL}?id={$field->id}&refresh=1";
+		$f->attr([
+			'hx-get' => $adminEdit, // caught by HTMX AJAX LISTENER in hook
+			'hx-target' => "#Inputfield_unit_set", // our element to target with swap
+			'hx-swap' => 'innerHTML swap:150ms settle:250ms', //
+			'hx-trigger' => 'change', //
+			'hx-include' => "[name=quantity]",  // the new quantity
+		]);
+		########## end of hx- attributes ########################
+
+		$f->addClass('no-selectize');
 		$inputfields->append($f);
 
 		$f = $this->modules->get('InputfieldCheckbox');
@@ -514,6 +568,50 @@ NB must be in ready() not init()
 		$inputfields->append($f);
 
 		$quantity = $field->get('quantity');
+		$fs = $this->unitSet($quantity, $field);
+		$inputfields->append($fs);
+
+		$f = $this->modules->get('InputfieldCheckbox');
+		$f->attr('name', 'show_remark');
+		$f->label = __('Show remark');
+		$f->notes = __("Show a remark entry box (default front-end rendering is as a tooltip).");
+		$f->attr('checked', $field->show_remark ? 'checked' : '');
+		$f->columnWidth = 100;
+		$inputfields->append($f);
+
+		return $inputfields;
+	}
+
+	/**
+	 * Create a Measurement object for API usage
+	 * E.g. Get the module: ````$mm = $modules->get('FieldtypeMeasurement');````
+	 * then use this to construct a new measurement: ````$measure = $mm->measurement();````
+	 * The arguments may be null and set later, but errors may occur if using methods for objects without all properties set. Use set and get thus:
+	 * ````
+	 * $measurement->set('quantity', 'Area');
+	 * $measurement->get('quantity');
+	 * ````
+	 * For combination units, the magnitude must be an array or a string of numbers with pipe joins, e.g. '2|3.5'
+	 *
+	 * @param string|null $quantity
+	 * @param string|null $unit
+	 * @param null $magnitude
+	 * @return Measurement
+	 * @see MetaTunes\MeasurementClasses\Measurement::__construct
+	 *
+	 */
+	public function measurement(?string $quantity = null, ?string $unit = null, $magnitude = null, $note = null) {
+		return new Measurement($quantity, $unit, $magnitude, $note);
+	}
+
+	protected function unitSet($quantity, $field) {
+		$ajax = wire('config')->ajax;
+		//bd($ajax, 'AJAX?');
+		//bd($field, 'field');
+		$fs = $this->wire()->modules->get('InputfieldFieldset');
+		$fs->name = 'unit_set';
+		$fs->label = __('Units & magnitude');
+
 		if($quantity) {
 			$m = $this->measurement($quantity);
 			$units = $m->units->definitions;
@@ -522,14 +620,13 @@ NB must be in ready() not init()
 				$extraNotes = isset($unit->notes) ? "<h4>{$key}</h4><p>{$unit->notes}</p>" : null;
 				$notes .= $extraNotes;
 			}
-
 			if($notes) {
 				$f = $this->modules->get('InputfieldMarkup');
 				$f->attr('name', 'notes');
 				$f->label = __("Notes about $quantity");
 				$f->value = $notes;
 				$f->collapsed = Inputfield::collapsedYes;
-				$inputfields->append($f);
+				$fs->append($f);
 			}
 
 			$f = $this->modules->get('InputfieldAsmSelect');
@@ -537,7 +634,6 @@ NB must be in ready() not init()
 			$f->name = $f_name;
 			$f->label = __('Select the units you want to appear as options for this field.');
 			$f->columnWidth = 100;
-//			$quantity = $field->get('quantity');
 			foreach($units as $key => $unit) {
 				$shortLabel = $unit['shortLabel'];
 				if($shortLabel) $shortLabel = "($shortLabel)";
@@ -545,7 +641,8 @@ NB must be in ready() not init()
 				$f->addOption($key, "$alias $shortLabel");
 			}
 			$f->value = $field->get('units');
-			$inputfields->append($f);
+			bd($f, 'Unit select field');
+			$fs->append($f);
 
 			$f = $this->modules->get('InputfieldCheckbox');
 			$f->attr('name', 'set_default');
@@ -553,7 +650,7 @@ NB must be in ready() not init()
 			$f->notes = __("If not checked, the default will be the base unit, if that is in the selection list");
 			$f->attr('checked', $field->set_default ? 'checked' : '');
 			$f->columnWidth = 33;
-			$inputfields->append($f);
+			$fs->append($f);
 
 			$f = $this->modules->get('InputfieldToggle');
 			$f->attr('name', 'enable_conversion');
@@ -569,7 +666,7 @@ NB must be in ready() not init()
 			// Set default
 			$f->value = ($field->get('enable_conversion') != '') ? $field->get('enable_conversion') : 2;  // Default is 'Ask'
 			$f->columnWidth = 33;
-			$inputfields->append($f);
+			$fs->append($f);
 
 			$f = $this->modules->get('InputfieldCheckbox');
 			$f->attr('name', 'hide_magnitude');
@@ -578,39 +675,32 @@ NB must be in ready() not init()
 			Any conversion options will be irrelevant.");
 			$f->attr('checked', $field->hide_magnitude ? 'checked' : '');
 			$f->columnWidth = 33;
-			$inputfields->append($f);
-		
-			$f = $this->modules->get('InputfieldCheckbox');
-			$f->attr('name', 'show_remark');
-			$f->label = __('Show remark');
-			$f->notes = __("Show a remark entry box (default front-end rendering is as a tooltip).");
-			$f->attr('checked', $field->show_remark ? 'checked' : '');
-			$f->columnWidth = 100;
-			$inputfields->append($f);
+			$fs->append($f);
+
 		}
-		//bd($inputfields, 'inputfields');
-		return $inputfields;
+		bd($fs, 'unit_set');
+		return $fs;
 	}
 
 	/**
 	 * Allow field settings to be modified on a template by template basis
 	 * Context-modifiable field settings are ````['quantity', 'units', 'hide_quantity', 'show_update', 'show_remark']````
 	 *
-	 * @see Fieldtype::getConfigAllowContext()
 	 * @param Field $field
 	 * @return array|string[]
+	 * @see Fieldtype::getConfigAllowContext()
 	 */
 	public function ___getConfigAllowContext(Field $field): array {
-		$a = array('quantity', 'units', 'hide_quantity', 'hide_magnitude', 'show_update', 'enable_conversion', 'show_remark', 'set_default');
+		$a = array('quantity', 'units', 'hide_quantity', 'hide_magnitude', 'show_update', 'enable_conversion', 'show_remark', 'set_default', 'unit_set');
 		return array_merge(parent::___getConfigAllowContext($field), $a);
 	}
 
-//	public function getModuleConfigInputfields($data) {
+	public function getModuleConfigInputfields($data) {
+		return new InputfieldWrapper();
+	}
+
+//	public function ___getModuleConfigArray() {
 //
-//}
-
-public function ___getModuleConfigArray() {
-
-}
+//	}
 
 }

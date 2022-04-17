@@ -38,3 +38,17 @@ td.tooltip {
 .tooltip:hover .tooltiptext {
   visibility: visible;
 }
+
+#Inputfield_unit_set {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+#Inputfield_unit_set.htmx-swapping {
+  opacity: 0.1;
+  transition: opacity 100ms ease-out;
+}
+
+#Inputfield_unit_set.htmx-settling {
+  opacity: 0.1;
+}
