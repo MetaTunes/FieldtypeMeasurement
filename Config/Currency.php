@@ -11,7 +11,7 @@ namespace MeasurementCurrency {
 
 		function currencyConverter($currency_from,$currency_to,$currency_input){
 			// Use recent details to avoid 5 per minute lockout
-			$sessionVar = wire()->session->get('MeasurementCurrency');
+			$sessionVar = (wire()->session->get('MeasurementCurrency')) ?: [];
 			//bd($sessionVar, 'sessionvar');
 			if($sessionVar and isset($sessionVar[$currency_from][$currency_to])) {
 				$savedDetails = $sessionVar[$currency_from][$currency_to];
@@ -21,7 +21,7 @@ namespace MeasurementCurrency {
 					return $currency_input * $rate;
 				}
 			}
-			$apiKey = wire()->config->alphaVantageApiKey; // Get your API key from https://www.alphavantage.co/ and put it in your config file
+			$apiKey = wire()->config->alphaVantageApiKey; // Get your API key from https://www.alphavantage.co/ and put it in your config file as $config->alphaVantageApiKey = 'yourkey';
 			$json = file_get_contents("https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$currency_from&to_currency=$currency_to&apikey=$apiKey");
 
 			$data = json_decode($json,true);
@@ -29,7 +29,8 @@ namespace MeasurementCurrency {
 			if(isset($data['Realtime Currency Exchange Rate']['5. Exchange Rate'])) {
 				$rate = (float) $data['Realtime Currency Exchange Rate']['5. Exchange Rate'];
 			} else {
-				throw new MeasurementException(__("Bad API return (maybe excess calls?)"));
+				throw new MeasurementException(__("Bad API return from alphadvantage (maybe missing API key or excess calls?). 
+				If you have no API key, get your API key from https://www.alphavantage.co/support/#api-key and put it in your config.php file as \$config->alphaVantageApiKey = 'yourkey';"));
 			}
 			$newVar = array_merge_recursive($sessionVar, [$currency_from => [$currency_to => ['time' => time(), 'rate' => $rate]]]);
 			//bd($newVar, 'new var');

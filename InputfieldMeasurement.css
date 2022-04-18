@@ -1,3 +1,13 @@
 .mmHidden {
   display: none;
 }
+
+.InputfieldMeasurement_magnitude {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+.InputfieldMeasurement_magnitude.htmx-request {
+  opacity: 0.1;
+  transition: opacity 100ms ease-out;
+}

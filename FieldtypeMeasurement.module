@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.12
+ * @version 0.0.13
+ * @since 0.0.12 minor enhancements & bug fixes
  * @since 0.0.11 interactive dependent select in config, bug fixes
  * @since 0.0.10 bug fixes to in-field conversion
  * @since 0.0.9 bug fixes and enhancements to in-field conversion
@@ -51,6 +52,22 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  */
 class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 
+	/**
+	 * @return array
+	 */
+	public static function getModuleInfo(): array {
+		return array(
+			'title' => __('Measurement', __FILE__), // Module Title
+			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
+			'version' => '0.0.13',
+			'author' => 'Mark Evens',
+			'requires' => ['ProcessWire>=3.0.148'],
+			'installs' => 'InputfieldMeasurement',
+			'requiredBy' => 'InputfieldMeasurement',
+			'autoload' => true,  // required so that ready() method runs
+			'icon' => 'balance-scale',
+		);
+	}
 
 	/**
 	 * Construct the Fieldtype and populate default settings and column types
@@ -154,9 +171,11 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			$sanitizer = $event->object;
 			//bd('sanitizer in hook');
 			$value = $event->arguments(0); // get first argument given to method
-			if(!is_array($value)) $value = explode('|', $value);
-			foreach($value as $key => $item) {
-				$value[$key] = (float)$item; //$sanitizer->float($item);
+			if($value !== null) {
+				if(!is_array($value)) $value = explode('|', $value);
+				foreach($value as $key => $item) {
+					$value[$key] = (float)$item; //$sanitizer->float($item);
+				}
 			}
 			$event->return = $value;
 		});
@@ -167,6 +186,12 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		parent::init();
 		//bd('init done');
 
+	}
+
+	public function ___install() {
+		if(!$this->wire()->config->useFunctionsAPI) {
+			$this->wire->session->error($this->_('You need to use the functions API for this module. Set $config->useFunctionsAPI=true in your config.php file'));
+		}
 	}
 
 	public function ready() {
@@ -253,23 +278,6 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			}
 		});
 
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getModuleInfo(): array {
-		return array(
-			'title' => __('Measurement', __FILE__), // Module Title
-			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.12',
-			'author' => 'Mark Evens',
-			'requires' => ['ProcessWire>=3.0.148'],
-			'installs' => 'InputfieldMeasurement',
-			'requiredBy' => 'InputfieldMeasurement',
-			'autoload' => true,  // required so that ready() method runs
-			'icon' => 'balance-scale',
-		);
 	}
 
 	/**

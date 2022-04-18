@@ -67,7 +67,7 @@ class ConversionRepository extends WireData {
 	 * @return bool
 	 */
 	public function unitExists(string $unit): bool {
-		return array_key_exists($unit, $this->definitions);
+		return $unit && array_key_exists($unit, $this->definitions);
 	}
 
 	/**

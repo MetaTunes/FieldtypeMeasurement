@@ -484,14 +484,14 @@ class Measurement extends BaseMeasurement {
 	 * @param null $magnitude
 	 */
 	public function __construct(?string $quantity = null, ?string $unit = null, $magnitude = null, $remark = null) {
-		if(!is_array($magnitude)) $magnitude = explode('|', $magnitude);
+//		if(!is_array($magnitude)) $magnitude = explode('|', $magnitude);  // dealt with in sanitizer
+		$magnitude = $this->sanitizer->magnitude($magnitude);
 		try {
 			if($quantity) $this->loadUnits($quantity);
 		} catch(FileNotFoundException $e) {
 			$this->error($e->getMessage());
 			return;
 		}
-		$magnitude = $this->sanitizer->magnitude($magnitude);
 		$this->set('magnitude', $magnitude);
 		$this->set('quantity', $quantity);
 		$this->set('remark', $remark);
