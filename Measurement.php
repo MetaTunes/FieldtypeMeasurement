@@ -193,7 +193,7 @@ class Measurement extends BaseMeasurement {
 	 * @return Measurement
 	 */
 	public function clone(): Measurement {
-		$m = new Measurement($this->quantity, $this->unit, $this->magnitude);
+		$m = new Measurement($this->quantity, $this->unit, $this->magnitude, $this->remark);
 		if(!$this->unit) $m->convertToBase();
 		return $m;
 	}
@@ -386,7 +386,7 @@ class Measurement extends BaseMeasurement {
 			'alias' => $unit,
 			'notes' => null,
 			'plural' => null,
-			'remark' => 'tooltip' // // how to display any contents of the 'remark' box: as 'tooltip', 'before' the value, 'after' the value, or 'none' (do not display)
+			'remarks' => 'tooltip' // // how to display any contents of the 'remark' box: as 'tooltip', 'before' the value, 'after' the value, or 'none' (do not display)
 		];
 
 		// Over-ride by config file settings
@@ -1134,7 +1134,7 @@ class Measurement extends BaseMeasurement {
 		} else {
 			$options = $this->formatOptions($options);
 		}
-		//bd($options, 'options in render');
+		//bd([$this->quantity, $this->magnitude, $this, $options], 'options in render');
 		$magnitudes = (is_array($this->magnitude)) ? $this->magnitude : [$this->magnitude];
 		$units = explode('|', $this->get('unit'));
 		//bd($units, 'units in render');
@@ -1144,9 +1144,10 @@ class Measurement extends BaseMeasurement {
 		$aliases = ($this->get('alias')) ? explode('|', $this->get('alias')) : explode('|', $this->get('unit'));
 		//bd($aliases, 'aliases');
 		if($this->remark) {
-			switch($options['remark']) {
+			//bd($this->remark, 'remark');
+			switch($options['remarks']) {
 				case 'tooltip' :
-					//bd($this->remark, 'remark');
+					//bd($this->remark, 'remark in tooltip');
 					$out = '<textarea readonly class="tooltiptext">' . $this->remark . '</textarea>'; // need to use textarea not span to avoid stuck open tooltip in ios. readonly required to prevent the tooltip from appearing to be editable directly
 					break;
 				case 'before' :
@@ -1207,7 +1208,7 @@ class Measurement extends BaseMeasurement {
 			}
 		}
 		// remark will get rendered even if there is no unit
-		$out .= ($this->remark && isset($options['remark']) && $options['remark'] == 'after') ? ' ' . $this->remark : '';
+		$out .= ($this->remark && isset($options['remarks']) && $options['remarks'] == 'after') ? ' ' . $this->remark : '';
 		// PW's page->render() will escape the html, so this is dealt with by hooking Page::renderField in FieldtypeMeasurement.module
 		//bd($out, 'out from render');
 		return $out;

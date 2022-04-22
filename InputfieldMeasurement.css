@@ -4,7 +4,7 @@
 
 .InputfieldMeasurement_magnitude {
   opacity: 1;
-  transition: opacity 200ms ease-in;
+  transition: opacity 100ms ease-in;
 }
 
 .InputfieldMeasurement_magnitude.htmx-request {

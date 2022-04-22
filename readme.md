@@ -81,7 +81,7 @@ The following methods are available for Measurement objects. (Note that, if you 
             'alias' => $unit,
             'notes' => null,
             'plural' => null,
-				'remark' => 'tooltip' // how to display any contents of the 'remark' box: as 'tooltip', 'before' the value, 'after' the value, or 'none' (do not display)
+				'remarks' => 'tooltip' // how to display any contents of the 'remark' box: as 'tooltip', 'before' the value, 'after' the value, or 'none' (do not display)
         ];
     ````
    'label =>'short' provides the abbreviations; for the long names (pluralised where appropriate), use 'long'. 'position' determines the location of the shortLabel (before or after the magnitude). Long names will always be after the magnitude and preceded by a space. Use 'label' => 'none' to omit labels. If 'round' is false then the value will be truncated.

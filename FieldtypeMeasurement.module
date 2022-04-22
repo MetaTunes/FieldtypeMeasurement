@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.13
+ * @version 0.0.14
+ * @since 0.0.13 bug fixes
  * @since 0.0.12 minor enhancements & bug fixes
  * @since 0.0.11 interactive dependent select in config, bug fixes
  * @since 0.0.10 bug fixes to in-field conversion
@@ -59,7 +60,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.13',
+			'version' => '0.0.14',
 			'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
 			'installs' => 'InputfieldMeasurement',
@@ -422,7 +423,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		$measurement = new Measurement($context->quantity, null, []);
 		if($context->quantity) $measurement->set('quantity', $context->quantity);
 		$measurement->set('magnitude', []);
-		$measurement->set('remark', null);
+		$measurement->set('remarks', null);
 		$measurement->set('shortLabel', null);
 		$measurement->set('plural', null);
 		return $measurement;
