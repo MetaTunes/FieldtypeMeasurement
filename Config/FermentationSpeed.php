@@ -24,7 +24,7 @@ namespace MetaTunes\MeasurementClasses {
 			),
 			"FSU" => array(
 				"shortLabel" => __("pts/100days"),
-				"decimals" => 1,
+				"decimals" => 2,
 				"conversion" => 1 / (100 * 24 * 60 * 60),
 			),
 		)

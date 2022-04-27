@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.14
+ * @version 0.0.15
+ * @since 0.0.14 improved operation inside repeater matrix items
  * @since 0.0.13 bug fixes
  * @since 0.0.12 minor enhancements & bug fixes
  * @since 0.0.11 interactive dependent select in config, bug fixes
@@ -60,7 +61,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.14',
+			'version' => '0.0.15',
 			'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
 			'installs' => 'InputfieldMeasurement',
@@ -311,6 +312,14 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	 */
 	public function getInputfield(Page $page, Field $field): Inputfield {
 		$inputfield = $this->wire('modules')->get('InputfieldMeasurement');
+		if($page->template->pageClass == 'RepeaterMatrixPage') {
+			if($page->getField($field->name)) {
+				$field_in_context = $page->fieldgroup->getFieldContext($field, "matrix$page->repeater_matrix_type");
+				if($field_in_context) {
+					$field = $field_in_context;
+				}
+			}
+		}
 		$inputfield->setField($field);
 		$inputfield->setPage($page);
 		return $inputfield;
@@ -354,7 +363,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		// create new Measurement object
 //		bd($measurement, 'measurement0 in ___wakeupValue'); //debug
 		if($value['quantity'] != $measurement->quantity) {
-			$this->error(sprintf($this->_(
+			$this->warning(sprintf($this->_(
 				'Quantity (%1$s) in database is different from quantity (%2$s) required in this context. Setting quantity to the context quantity.'),
 				$value['quantity'], $measurement->quantity));
 			// $measurement->quantity will already have been set to $context->quantity in getBlankValue
@@ -419,6 +428,17 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	public function getBlankValue(Page $page, Field $field): Measurement {
 		//NB Field details may differ between templates so we need to get the field in context
 		$context = ($page && $page->id) ? $field->getContext($page->template) : $field;
+		//bd($page, 'page in getblank');
+
+		if($page->template->pageClass == 'RepeaterMatrixPage') {
+			if($page->getField($field->name)) {
+				$context = $page->fieldgroup->getFieldContext($field, "matrix$page->repeater_matrix_type");
+			}
+		}
+		//bd($context, 'CONTEXT IN getBlankValue');
+//		if(isset($field_in_context)) bd($field_in_context, 'CONTEXT IN getBlankValue');
+
+
 		/* @var $context FieldtypeMeasurement */
 		$measurement = new Measurement($context->quantity, null, []);
 		if($context->quantity) $measurement->set('quantity', $context->quantity);
@@ -470,7 +490,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			'quantity' => $value->quantity,
 			'note' => $value->remark
 		);
-//		bd($sleepValue, 'sleepValue'); //debug
+		//bd($sleepValue, 'sleepValue'); //debug
 		return $sleepValue;
 	}
 

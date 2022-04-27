@@ -24,7 +24,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.14',
+            'version' => '0.0.15',
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement"),
 			'icon' => 'balance-scale',
@@ -80,7 +80,7 @@ class InputfieldMeasurement extends Inputfield {
 	 */
     public function ___render() {
 		########### Get basic details ########################
-		bd($this, 'THIS');
+		//bd($this, 'THIS at start of render');
 		$name = $this->attr('name');
 		//bd($name, 'inputfield name');
 		$field = $this->field;
@@ -133,6 +133,7 @@ class InputfieldMeasurement extends Inputfield {
 
 		#################### Populate individual fields - quantity, magnitude & units ###################
 		// quantity
+
 		if (!$field->hide_quantity) {
 			$f = $this->modules->get("InputfieldMarkup");
 			$f->label = $value->get('quantity') . ': ' . $this->_("Notes");
@@ -184,6 +185,7 @@ class InputfieldMeasurement extends Inputfield {
 			$f->addOption($unit, "$alias $shortLabel");
 			}
 		if($value->unit) $f->notes = $units[$value->get('unit')]->notes;
+		//bd($f->notes, 'notes');
 		$f->columnWidth = $colWidth;
 
 		######### Set the js variables to handle in-field conversion #############
@@ -252,6 +254,8 @@ class InputfieldMeasurement extends Inputfield {
 			$f->rows = 1;
 			$inputfields->add($f);
 		}
+		//bd($inputfields, 'inputfields');
+		//bd($this, 'THIS at end of render');
 		return $inputfields->render();
 	}
 
@@ -356,14 +360,9 @@ class InputfieldMeasurement extends Inputfield {
 	 */
 	public function ___processInput(WireInputData $input) {
 		try {
+			//bd($this, 'this at start of process input');
 			$name = $this->attr('name');
 			$value = $this->attr('value');
-			if(!is_a($value, 'MetaTunes\MeasurementClasses\Measurement')) return $this;
-			/* @var $value Measurement */
-			$old = clone $value; // Don't want $old to change when $value is altered
-			//bd($value, 'value at start of process input');
-			// $value->targetSanitized = null;
-
 			$input_names = array(
 				'magnitude' => "{$name}_magnitude",
 				'unit' => "{$name}_unit",
@@ -371,11 +370,20 @@ class InputfieldMeasurement extends Inputfield {
 				'update' => "{$name}_update",
 				'remark' => "{$name}_remark"
 			);
+			if(!is_a($value, 'MetaTunes\MeasurementClasses\Measurement')) return $this;
+			/* @var $value Measurement */
+			$old = clone $value; // Don't want $old to change when $value is altered
+
+
+			//bd($value, 'value after start of process input');
+			// $value->targetSanitized = null;
+
+
 
 			$value->set('magnitude', [0]); // default to prevent errors if no input
 			// loop inputs and set them (  even if not changed - as magnitude format may be wrong)
 			foreach($input_names as $key => $name) {
-				//bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc');
+				//bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc for ' . $key . '=>' . $name);
 				if(isset($input->$name)) {  // deleted  && $value->get($key) != $input->$name from condition
 					//bd($key, 'key');
 					if($key == 'magnitude') {
@@ -401,14 +409,14 @@ class InputfieldMeasurement extends Inputfield {
 						if(!preg_match($re, $input->$name)) throw new MeasurementException($msg);
 						// If OK, carry on!
 						//bd([$key, $input->$name], '$input->$name');
-						if(!is_numeric($input->$name)) {
+//						if(!is_numeric($input->$name)) {
 //							$magnitude = explode('|', $input->$name);
 //							$magnitude = array_filter($magnitude, 'is_numeric');
 							$magnitude = $this->sanitizer->magnitude($input->$name);  //added by hook in FieldtypeMeasurement
 							$value->set($key, $magnitude);
-						} else {
-							$value->set($key, [$input->$name]);
-						}
+//						} else {
+//							$value->set($key, [$input->$name]);
+//						}
 						//bd($value->get('magnitude'), 'Magnitude0');
 					} else {
 						$value->set($key, $input->$name);
@@ -446,14 +454,18 @@ class InputfieldMeasurement extends Inputfield {
 					}
 				}
 			}
-			bd($value, 'value at end of process_input');
-			//bd($this, 'this at end of process_input');
+			// NB Removed the refreshing of value per below as I do not think it is necessary any more (after fixing matrix item contexts)
+			//$value = new Measurement($this->field->quantity, $value->get('unit'), $value->get('magnitude'), $value->get('remark'));
+			//bd($value, 'value at end of process_input');
+			//$this->value = $value;
+
 
 
 
 		} catch(MeasurementException $e) {
 			$this->error($e->getMessage());
 		}
+		//bd($this, 'this at end of process_input');
 		return $this;
     }
 
