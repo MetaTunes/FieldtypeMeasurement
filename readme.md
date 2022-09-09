@@ -3,7 +3,7 @@ This fieldtype allows a measurement unit to be stored along with a corresponding
 The relevant details for the type of measurement are set in the Details tab of the field setup page. 
 The API permits various conversions and formatting.
 
-**Please note that this module is 'alpha' at the moment - it has all the planned functionality and has been tested in PW3.0.148 - 198. However, different PW versions, modules and your own code may affect it differently. It is therefore not recommended for use in production sites unless you have fully tested it in context first.**
+**Please note that this module is 'alpha' at the moment - it has all the planned functionality and has been tested in PW3.0.148 - 203. However, different PW versions, modules and your own code may affect it differently. It is therefore not recommended for use in production sites unless you have fully tested it in context first.**
 
 ## Installation
 
