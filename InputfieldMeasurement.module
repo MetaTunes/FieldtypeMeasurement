@@ -24,7 +24,8 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.15',
+            'version' => '0.0.17',
+			// see FieldtypeMeasurement.module for version history
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement"),
 			'icon' => 'balance-scale',
@@ -273,10 +274,15 @@ class InputfieldMeasurement extends Inputfield {
 			$magnitude = (is_array($value->get('magnitude'))) ? implode('|', $value->get('magnitude')) : $value->get('magnitude');
 		} else {
 			$f = $this->modules->get("InputfieldText");
-			$f->notes = __("Numeric");
-			$f->precision = 6;
-			$f->attr('type', "number");
-			$f->attr('step', "any");
+			if(wire()->modules->isInstalled('RockCalculator')) {
+				$f->attr("data-rockcalculator", 6); //6 digit precision
+				$f->notes = __("Numeric or math formula");
+			} else {
+				$f->notes = __("Numeric");
+				$f->precision = 6;
+				$f->attr('type', "number");
+				$f->attr('step', "any");
+			}
 			if($value->get('magnitude')) {
 				$magnitude = (is_array($value->get('magnitude'))) ? $value->get('magnitude')[0] : $value->get('magnitude');
 			} else {

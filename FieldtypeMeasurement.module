@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.16
+ * @version 0.0.17
+ * @since 0.0.16 allow use of RockCalculator, if installed
  * @since 0.0.15 bug fix
  * @since 0.0.14 improved operation inside repeater matrix items
  * @since 0.0.13 bug fixes
@@ -62,7 +63,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.16',
+			'version' => '0.0.17',
 			'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
 			'installs' => 'InputfieldMeasurement',
@@ -186,6 +187,14 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 			$js = $config->urls->$this . "{$this}.js?v=$version";
 			$this->wire()->config->scripts->append($js);
 		}
+		if($this->wire->modules->isInstalled('RockCalculator')) {
+			$rc = wire()->modules->get('RockCalculator');
+			$this->wire->config->scripts->add($rc->m('lib/math.min.js'));
+			$this->wire->config->scripts->add($rc->m('lib/tooltip.js'));
+			$this->wire->config->scripts->add($rc->m($rc->className . '.js'));
+			$this->wire->config->styles->add($rc->m($rc->className . '.css'));
+		}
+
 		parent::init();
 		//bd('init done');
 
