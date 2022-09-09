@@ -5,6 +5,12 @@ The API permits various conversions and formatting.
 
 **Please note that this module is 'alpha' at the moment - it has all the planned functionality and has been tested in PW3.0.148 - 198. However, different PW versions, modules and your own code may affect it differently. It is therefore not recommended for use in production sites unless you have fully tested it in context first.**
 
+## Installation
+
+FieldtypeMeasurement can be installed like every other module in ProcessWire. Check the following guide for detailed information: [How-To Install or Uninstall Modules](http://modules.processwire.com/install-uninstall/)
+
+It requires **ProcessWire version >=3.0.148**. This is checked during the installation of the module. You may also wish to install [RockCalculator](https://processwire.com/modules/rock-calculator/). This is not required but, if installed, will automatically apply to measurement fields without further set-up (for use in other fields refer to the documentation with that module).
+
 ## Set up
 The various units of measurement are defined in the module FieldtypeMeasurement/Config directory. 
 There is a separate file for each type of quantity - e.g. "Length", "Area". 
