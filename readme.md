@@ -295,7 +295,12 @@ See Config/SpecificGravity.php and Config/Currency.php for examples of all these
 
 An (almost) real time currency converter is included as Config/Currency.php. Please not that this is proof of concept at present - do not use for real financial transactions. It is intended as an example of how to add such a feature. The example uses Alpha Vantage (https://www.alphavantage.co/) which provides free API keys with usage constraints - you will need to get a key to use it. Once you have your key, put it in your config.php file thus: ````$config->alphaVantageApiKey = 'yourkey';````.
 
+## Hooks
+
+Various methods within the FieldtypeMeasurement class are hookable (inspect code to see what exactly). In particular, an optional argument has been introduced to ___wakeupValue:  argument[3] - $warnNull, if set to true will suppress the warning provided if the measurement has a null unit (default is false). Measurements may deliberately make use of null units to designate themselves as calculated fields (i.e. completed by API at run time, not by entered and stored data).
+
  # Changelog
+ * 0.0.18 allow optional suppression of null units warning on wakeup
  * 0.0.17 allow use of RockCalculator, if installed
  * 0.0.16 bug fixes
  * 0.0.15 improved operation inside repeater matrix items

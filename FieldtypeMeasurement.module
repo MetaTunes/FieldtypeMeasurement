@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.17
+ * @version 0.0.18
+ * @since 0.0.17 allow optional suppression of null units warning on wakeup
  * @since 0.0.16 allow use of RockCalculator, if installed
  * @since 0.0.15 bug fix
  * @since 0.0.14 improved operation inside repeater matrix items
@@ -63,7 +64,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.17',
+			'version' => '0.0.18',
 			'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
 			'installs' => 'InputfieldMeasurement',
@@ -357,11 +358,12 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	 * @param Page $page
 	 * @param Field $field
 	 * @param string|int|array $value
+	 * @param boolean $warnNull optional argument to allow suppression of null warning - not part of parent method
 	 * @return string|int|array|object $value
 	 *
 	 * @throws WireException
 	 */
-	public function ___wakeupValue(Page $page, Field $field, $value) {
+	public function ___wakeupValue(Page $page, Field $field, $value, $warnNull = true) {
 		// if for some reason we already get a valid value, then just return it
 		if($value instanceof Measurement) return $value;
 		//bd($value, 'wakeup value');
@@ -401,8 +403,9 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		} else {
 			$measurement->unit = null;
 			//bd($value, 'unit not known');
-			$this->warning($this->_(
-				'Unit is not known. Value is shown as base units. Measurements with null unit will not be rendered. Please amend if appropriate.'));
+			if($warnNull) $this->warning(sprintf($this->_(
+				'Unit is not known for field %s. Value is shown as base units. Measurements with null unit will not be rendered. Please amend if appropriate.'),
+				$field->name));
 		}
 		if(!is_array($measurement->magnitude)) $measurement->magnitude = [$measurement->magnitude];
 //		bd($measurement, 'measurement1 in ___wakeupValue');  //debug
