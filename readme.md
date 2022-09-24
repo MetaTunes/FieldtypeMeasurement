@@ -137,6 +137,8 @@ The following methods are available for Measurement objects. (Note that, if you 
 
 * *multiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: If $multiplier is a number then the measurement will simply be scaled. If $multiplier is a Measurement object then the result will be computed using dimensional analysis (both the current object and $measurement must be of quantities that have dimensions defined). If $quantity and $unit are not defined then they will be inferred as far as possible, otherwise they will be checked for consistency and the result will be returned as specified.
 
+* *baseMultiplyBy($multiplier, ?string $quantity = null, ?string $unit = null)*: Method to use instead of multiplyBy(), where it is expected that the result of multiplyBy() would be an unknown quantity. This method anticipates that the result will be a BaseMeasurement and avoids unnecessary warnings
+
 * *productOf(...$measurements)*: Multiplies the measurements using dimensional analysis (see *multiplyBy()* ) and updates the current object, which must have a quantity, dimension and units consistent with the intended product.
 
 * *negate()*: Multiply by -1.
@@ -144,6 +146,8 @@ The following methods are available for Measurement objects. (Note that, if you 
 * *power(int $exp, ?string $quantity = null, ?string $unit = null)*: Raise the measurement to the given power (any real number).  If the result is has a dimension not matching any quantity, it returns a BaseMeasurement (dimensionless of magnitude 1 if $exp = 0).
 
 * *divideBy($divisor, ?string $quantity = null, ?string $unit = null)*: Analogous to multiplyBy() above.
+
+* *baseDivideBy($divisor, ?string $quantity = null, ?string $unit = null)*: Method to use instead of divideBy(), where it is expected that the result of divideBy() would be an unknown quantity. This method anticipates that the result will be a BaseMeasurement and avoids unnecessary warnings
 
 * *invert(?string $quantity = null, ?string $unit = null)*: Raise to the power -1. See *power()*.
 
@@ -300,6 +304,7 @@ An (almost) real time currency converter is included as Config/Currency.php. Ple
 Various methods within the FieldtypeMeasurement class are hookable (inspect code to see what exactly). In particular, an optional argument has been introduced to ___wakeupValue:  argument[3] - $warnNull, if set to true will suppress the warning provided if the measurement has a null unit (default is false). Measurements may deliberately make use of null units to designate themselves as calculated fields (i.e. completed by API at run time, not by entered and stored data).
 
  # Changelog
+ * 0.0.19 new Measurement methods baseMultiplyBy() & baseDivideBy() - see API details above
  * 0.0.18 allow optional suppression of null units warning on wakeup
  * 0.0.17 allow use of RockCalculator, if installed
  * 0.0.16 bug fixes

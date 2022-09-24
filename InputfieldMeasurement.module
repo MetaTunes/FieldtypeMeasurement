@@ -24,7 +24,7 @@ class InputfieldMeasurement extends Inputfield {
         return array(
             'title' => __('Inputfield Measurement', __FILE__),
             'summary' => __('Edit a measurement in specified units.', __FILE__),
-            'version' => '0.0.18',
+            'version' => '0.0.19',
 			// versions tied to FieldtypeMeasurement.module - see that file for version history
             'author' => 'Mark Evens',
             'requires' => array("FieldtypeMeasurement"),

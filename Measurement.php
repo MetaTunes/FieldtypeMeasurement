@@ -273,9 +273,10 @@ class Measurement extends BaseMeasurement {
 	 */
 	public function valueAs(string $unit, ?int $decimals = null, bool $round = true) {
 		try {
-//			bd($this, 'this valueAs');
-//			bd($unit, 'unit in valueAs');
 			if(is_null($this->get('magnitude'))) {
+				bd($this, 'this valueAs');
+				bd($unit, 'unit in valueAs');
+				bd(debug_backtrace(), 'BACKTRACE');
 				throw new MeasurementException($this->_("From Value Not Set."));
 			}
 			if(is_array($unit)) {
@@ -773,6 +774,19 @@ class Measurement extends BaseMeasurement {
 	}
 
 	/**
+	 * method to use instead of multiplyBy(), where it is expected that the result of multiplyBy() would be an unknown quantity
+	 * this method anticipates that the result will be a BaseMeasurement and avoids unnecessary warnings
+	 *
+	 * @param $multiplier
+	 * @param string|null $quantity
+	 * @param string|null $unit
+	 * @return BaseMeasurement|Measurement
+	 */
+	function baseMultiplyBy($multiplier, ?string $quantity = null, ?string $unit = null){
+		return parent::multiplyBy($multiplier, $quantity, $unit);
+	}
+
+	/**
 	 * Returns a Measurement object being the quotient (or a BaseMeasurement object if there is no matching quantity for the resulting dimension).
 	 * If $divisor is a number then the measurement will simply be scaled.
 	 * If $divisor is a Measurement object then the result will be computed using dimensional analysis
@@ -793,6 +807,19 @@ class Measurement extends BaseMeasurement {
 			$multiplier = $divisor->invert();  // NB Do not supply $quantity and $unit here as this intermediate result may not have matching quantity
 		}
 		return $this->multiplyBy($multiplier, $quantity, $unit); // Supply $quantity and $unit for this final step
+	}
+
+	/**
+	 * method to use instead of divideBy(), where it is expected that the result of divideBy() would be an unknown quantity
+	 * this method anticipates that the result will be a BaseMeasurement and avoids unnecessary warnings
+	 *
+	 * @param $multiplier
+	 * @param string|null $quantity
+	 * @param string|null $unit
+	 * @return BaseMeasurement|Measurement
+	 */
+	function baseDivideBy($divisor, ?string $quantity = null, ?string $unit = null){
+		return parent::divideBy($divisor, $quantity, $unit);
 	}
 
 	/**
@@ -863,6 +890,7 @@ class Measurement extends BaseMeasurement {
 			}
 		} else {
 			if(count($compatibleQuantities) == 0) {
+				bd(debug_backtrace(), 'BACKTRACE');
 				wire()->warning(__("Result is an unknown quantity. Returning  a result of class 'BaseMeasurement' - i.e a magnitude and dimension only"));
 			} else {
 				$quantity = $compatibleQuantities[0];
