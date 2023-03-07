@@ -36,7 +36,7 @@ return array(
 				}
 			},
 			"join" => [" "],
-			"plural" => "feet|inches"
+			"plural" => "stones|pounds"
 		)
 	)
 );

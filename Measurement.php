@@ -274,9 +274,9 @@ class Measurement extends BaseMeasurement {
 	public function valueAs(string $unit, ?int $decimals = null, bool $round = true) {
 		try {
 			if(is_null($this->get('magnitude'))) {
-				bd($this, 'this valueAs');
-				bd($unit, 'unit in valueAs');
-				bd(debug_backtrace(), 'BACKTRACE');
+				//bd($this, 'this valueAs');
+				//bd($unit, 'unit in valueAs');
+				//bd(debug_backtrace(), 'BACKTRACE');
 				throw new MeasurementException($this->_("From Value Not Set."));
 			}
 			if(is_array($unit)) {
@@ -890,7 +890,7 @@ class Measurement extends BaseMeasurement {
 			}
 		} else {
 			if(count($compatibleQuantities) == 0) {
-				bd(debug_backtrace(), 'BACKTRACE');
+				//bd(debug_backtrace(), 'BACKTRACE');
 				wire()->warning(__("Result is an unknown quantity. Returning  a result of class 'BaseMeasurement' - i.e a magnitude and dimension only"));
 			} else {
 				$quantity = $compatibleQuantities[0];
