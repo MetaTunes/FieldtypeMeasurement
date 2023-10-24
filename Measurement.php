@@ -287,9 +287,9 @@ class Measurement extends BaseMeasurement {
 			if(!$this->units->unitExists($unit)) {
 				throw new MeasurementInvalidUnitException(sprintf($this->_('Conversion from Unit=%s not possible - unit does not exist.'), $unit));
 			}
-			//$thisUnit = ($this->get('unit')) ?: $this->get('baseUnit');
-			//bd([$this->get('unit'), $this], 'unit for conversion');
-			$conversionFrom = $this->units->getConversion($this->get('unit'));
+			$thisUnit = ($this->get('unit')) ?: $this->get('baseUnit');
+			//bd([$thisUnit, $this], 'unit for conversion');
+			$conversionFrom = $this->units->getConversion($thisUnit);
 			$conversionTo = $this->units->getConversion($unit);
 //			bd($conversionTo, 'conversionTo');
 //			bd($conversionFrom, 'conversionFrom');
