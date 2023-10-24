@@ -19,7 +19,8 @@ use MetaTunes\MeasurementClasses\{BaseMeasurement, Measurement, Dimension};
  *
  * http://processwire.com
  *
- * @version 0.0.20
+ * @version 0.0.21
+ * @since 0.0.20 bug fix Measurement.php
  * @since 0.0.19 bug fix Mass.php
  * @since 0.0.18 new Measurement methods baseMultiplyBy() & baseDivideBy()
  * @since 0.0.17 allow optional suppression of null units warning on wakeup
@@ -66,7 +67,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 		return array(
 			'title' => __('Measurement', __FILE__), // Module Title
 			'summary' => __('Field that stores values for: quantity (Temperature, Mass etc.), unit (Celsius, kilogram etc.) and magnitude (in base units and the specified units).', __FILE__), // Module Summary
-			'version' => '0.0.20',
+			'version' => '0.0.21',
 			'author' => 'Mark Evens',
 			'requires' => ['ProcessWire>=3.0.148'],
 			'installs' => 'InputfieldMeasurement',

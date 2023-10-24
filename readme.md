@@ -304,6 +304,8 @@ An (almost) real time currency converter is included as Config/Currency.php. Ple
 Various methods within the FieldtypeMeasurement class are hookable (inspect code to see what exactly). In particular, an optional argument has been introduced to ___wakeupValue:  argument[3] - $warnNull, if set to true will suppress the warning provided if the measurement has a null unit (default is false). Measurements may deliberately make use of null units to designate themselves as calculated fields (i.e. completed by API at run time, not by entered and stored data).
 
  # Changelog
+ * 0.0.21 bug fix Measurement.php
+ * 0.0.20 bug fix Mass.php
  * 0.0.19 new Measurement methods baseMultiplyBy() & baseDivideBy() - see API details above
  * 0.0.18 allow optional suppression of null units warning on wakeup
  * 0.0.17 allow use of RockCalculator, if installed
