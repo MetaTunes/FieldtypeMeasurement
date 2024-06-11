@@ -374,9 +374,8 @@ class InputfieldMeasurement extends Inputfield {
 	 *
 	 */
 	public function ___processInput(WireInputData $input) {
-		bd($input, 'input in InputfieldMeasurement');
 		try {
-			bd($this, 'this at start of process input');
+			//bd($this, 'this at start of process input');
 			$name = $this->attr('name');
 			$value = $this->attr('value');
 			$input_names = array(
@@ -472,7 +471,7 @@ class InputfieldMeasurement extends Inputfield {
 			}
 			// NB Removed the refreshing of value per below as I do not think it is necessary any more (after fixing matrix item contexts)
 			//$value = new Measurement($this->field->quantity, $value->get('unit'), $value->get('magnitude'), $value->get('remark'));
-			bd($value, 'value at end of process_input');
+			//bd($value, 'value at end of process_input');
 			//$this->value = $value;
 
 
@@ -481,7 +480,7 @@ class InputfieldMeasurement extends Inputfield {
 		} catch(MeasurementException $e) {
 			$this->error($e->getMessage());
 		}
-		bd($this, 'this at end of process_input');
+		//bd($this, 'this at end of process_input');
 		return $this;
     }
 

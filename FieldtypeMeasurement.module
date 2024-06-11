@@ -476,7 +476,7 @@ class FieldtypeMeasurement extends Fieldtype implements ConfigurableModule {
 	public function ___sleepValue(Page $page, Field $field, $value): array {
 
 		$sleepValue = array();
-		bd($value, 'value to sleep'); //debug
+//		bd($value, 'value to sleep'); //debug
 		// if we are given something other than a Measurement object,
 		// then just return a blank array
 		if(!$value instanceof Measurement) return $sleepValue;
