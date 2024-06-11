@@ -83,31 +83,32 @@ class InputfieldMeasurement extends Inputfield {
 		########### Get basic details ########################
 		//bd($this, 'THIS at start of render');
 		$name = $this->attr('name');
-		//bd($name, 'inputfield name');
+//		bd($name, 'inputfield name');
 		$field = $this->field;
 		$page = $this->page;
 
 		//todo somehow if($page->$field->collapsed == 7) return $page->$field->render(); ?
 
-		//bd($this->attr('value'), __METHOD__ . ': $value at line #' . __LINE__);
+//		bd($this->attr('value'), __METHOD__ . ': $value at line #' . __LINE__);
 		$value = $this->attr('value');
-		if(!$value || !$value->quantity){
+		if(!$value || !is_a($value, 'MetaTunes\MeasurementClasses\Measurement') || !$value->quantity){
 			$value = new Measurement($field->quantity);
-
+			$this->attr('value', $value);
 		}
+//		bd($value, __METHOD__ . ': $value at line #' . __LINE__);
 
 		$numberOfCols = ($field->hide_magnitude) ? 1 : 2;
 		$colWidth = 100 / $numberOfCols;
-		//bd($this->attr('value'), __METHOD__ . ': $value at line #' . __LINE__);
+		//bd($value, __METHOD__ . ': $value at line #' . __LINE__);
 
 		##################### HTMX AJAX LISTENER #############################
 		$input = $this->wire('input');
 		$ajax = $this->wire('config')->ajax;
 		 //bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
-		 //bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
-		if ($ajax && str_starts_with($input->get('fieldName'), $this->attr('name'))) {
+//		 bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
+		if ($ajax &&  $input->get('fieldName')  && str_starts_with($input->get('fieldName'), $this->attr('name'))) {
 			//bd($ajax, __METHOD__ . ': $ajax at line #' . __LINE__);
-			//bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
+//			bd($input->get('fieldName'), __METHOD__ . ': $input->get(fieldName) at line #' . __LINE__);
 			//bd($input->get('id'), __METHOD__ . ': $input->get(id) at line #' . __LINE__);
 			$name = $input->get('fieldName');
 			$target = $input->get('target');
@@ -124,7 +125,7 @@ class InputfieldMeasurement extends Inputfield {
 			die();
 		} else {
 			// @debug
-			//bd($ajax, __METHOD__ . ': $ajax - NO AJAX AND/OR WRONG INPUTFIELD - at line #' . __LINE__);
+//			bd($ajax, __METHOD__ . ': $ajax - NO AJAX AND/OR WRONG INPUTFIELD - at line #' . __LINE__);
 		}
 		######################################## END OF HTMX LISTENER ##############################
 
@@ -212,8 +213,16 @@ class InputfieldMeasurement extends Inputfield {
 			#### add HTMX to do measurement conversion ####
 			$targetHtml = (isset($magnitudeHtml)) ? $magnitudeHtml : '<input>';  // should always be set
 			$targetHtml = urlencode($targetHtml);
-			$adminEditURL = $this->wire('config')->urls->admin . "page/edit/";
-			$adminEdit = "{$adminEditURL}?id={$this->page->id}&fieldName={$name}&target={$targetHtml}";
+			if($this->page->process == 'ProcessModule') {
+				bd([$this->page, $this->input->get->name], 'page, input');
+				$adminEditURL = $this->wire('config')->urls->admin . "module/edit";
+				bd([$name, urldecode($targetHtml)], 'name, targetHtml');
+				$adminEdit = "{$adminEditURL}?name={$this->input->get->name}&collapse_info=1&fieldName={$name}&target={$targetHtml}";
+				bd($adminEdit, __METHOD__ . ': $adminEdit at line #' . __LINE__);
+			} else {
+				$adminEditURL = $this->wire('config')->urls->admin . "page/edit/";
+				$adminEdit = "{$adminEditURL}?id={$this->page->id}&fieldName={$name}&target={$targetHtml}";
+			}
 			//bd($adminEdit, __METHOD__ . ': $adminEdit at line #' . __LINE__);
 			$target = "{$name}_magnitude";
 			$source = "{$name}_unit";
@@ -365,8 +374,9 @@ class InputfieldMeasurement extends Inputfield {
 	 *
 	 */
 	public function ___processInput(WireInputData $input) {
+		bd($input, 'input in InputfieldMeasurement');
 		try {
-			//bd($this, 'this at start of process input');
+			bd($this, 'this at start of process input');
 			$name = $this->attr('name');
 			$value = $this->attr('value');
 			$input_names = array(
@@ -389,9 +399,9 @@ class InputfieldMeasurement extends Inputfield {
 			$value->set('magnitude', [0]); // default to prevent errors if no input
 			// loop inputs and set them (  even if not changed - as magnitude format may be wrong)
 			foreach($input_names as $key => $name) {
-				//bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc for ' . $key . '=>' . $name);
+//				bd(['input' => $input->$name, 'value->key' => $value->get($key)], 'input name etc for ' . $key . '=>' . $name);
 				if(isset($input->$name)) {  // deleted  && $value->get($key) != $input->$name from condition
-					//bd($key, 'key');
+//					bd($key, 'key');
 					if($key == 'magnitude') {
 						$input->$name = trim($input->$name);
 						if(!$input->$name) $input->$name = 0;
@@ -414,7 +424,7 @@ class InputfieldMeasurement extends Inputfield {
 						$msg = $this->_("Change not made - magnitude not in correct format.");
 						if(!preg_match($re, $input->$name)) throw new MeasurementException($msg);
 						// If OK, carry on!
-						//bd([$key, $input->$name], '$input->$name');
+//						bd([$key, $input->$name], '$input->$name');
 //						if(!is_numeric($input->$name)) {
 //							$magnitude = explode('|', $input->$name);
 //							$magnitude = array_filter($magnitude, 'is_numeric');
@@ -423,26 +433,26 @@ class InputfieldMeasurement extends Inputfield {
 //						} else {
 //							$value->set($key, [$input->$name]);
 //						}
-						//bd($value->get('magnitude'), 'Magnitude0');
+//						bd($value->get('magnitude'), 'Magnitude0');
 					} else {
 						$value->set($key, $input->$name);
 					}
 //					$this->trackChange('value');
-					//bd($this->getChanges());
-					//bd($value->get('magnitude'), 'Magnitude1');
+//					bd($this->getChanges());
+//					bd($value->get('magnitude'), 'Magnitude1');
 				}
 			}
 
 			$new = $value;
-			//bd(['old' => $old, 'new' => $new], 'changes to field');
+//			bd(['old' => $old, 'new' => $new], 'changes to field');
 			$oldUnit = $old->get('unit');
 			$newUnit = $new->get('unit');
 //			bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit?');
 //			bd($value->get('update'), 'update?');
 			if($oldUnit and $newUnit and $oldUnit != $newUnit and $value->get('update') == 1) {
-				//bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
+//				bd(['old unit' => $oldUnit, 'new unit' => $newUnit], 'change of unit');
 				// Check consistency of units and magnitude
-				//bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $oldUnit)))], 'count compare old');
+//				bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $oldUnit)))], 'count compare old');
 				if(count($value->get('magnitude')) != count((explode('|', $oldUnit)))) {
 					// In theory, this should never happen as the input has already been checked
 					throw new MeasurementException(sprintf($this->_('Magnitude (%1$s) not consistent with original unit (%2$s)'), $value->get('magnitude'), $oldUnit));
@@ -450,10 +460,10 @@ class InputfieldMeasurement extends Inputfield {
 				$value->set('unit', $oldUnit);
 				$value->convertTo($newUnit);
 			} else {
-				//bd('No change');
+//				bd('No change');
 				if($value->get('unit')) {
 					// Check consistency of units and magnitude
-					//bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $newUnit)))], 'count compare new');
+//					bd(['Mag' => count($value->get('magnitude')), 'Unit' => count((explode('|', $newUnit)))], 'count compare new');
 					if(count($value->get('magnitude')) != count((explode('|', $newUnit)))) {
 						// In theory, this should never happen as the input has already been checked
 						throw new MeasurementException(sprintf($this->_('Magnitude (%1$s) not consistent with chosen unit (%2$s)'), $value->get('magnitude'), $newUnit));
@@ -462,7 +472,7 @@ class InputfieldMeasurement extends Inputfield {
 			}
 			// NB Removed the refreshing of value per below as I do not think it is necessary any more (after fixing matrix item contexts)
 			//$value = new Measurement($this->field->quantity, $value->get('unit'), $value->get('magnitude'), $value->get('remark'));
-			//bd($value, 'value at end of process_input');
+			bd($value, 'value at end of process_input');
 			//$this->value = $value;
 
 
@@ -471,7 +481,7 @@ class InputfieldMeasurement extends Inputfield {
 		} catch(MeasurementException $e) {
 			$this->error($e->getMessage());
 		}
-		//bd($this, 'this at end of process_input');
+		bd($this, 'this at end of process_input');
 		return $this;
     }
 

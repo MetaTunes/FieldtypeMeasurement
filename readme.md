@@ -68,6 +68,46 @@ will select all pages where the temperature exceeds 293 Kelvin, regardless of wh
 
 **Important**: If magnitude is composite (e.g. 1|10 representing, say, 1 ft 10 inches) then the comparison will treat the pipe join as if it was a decimal point, so it will think that 1|10 < 1|2, which is wrong. Therefore, if using > or < in the comparison and there is a risk of combination units existing where the second (or subsequent) portion may be greater than 9, use baseMagnitude, not magnitude.
 
+## Use in module config fields (new in v 0.0.22)
+The field can be used in module config fields (i.e. in a module's getModuleConfigInputfields method) but you need to 
+create a measurement object and convert it to an array before it is saved. For example:
+````
+//Timeouts
+		$m = $modules->get('FieldtypeMeasurement');
+		$f= $modules->InputfieldMeasurement;
+		$field = new Field();
+		$field->setFieldtype($m);
+		$field->set('quantity', 'Time');
+		$field->set('units', ['second', 'minute', 'hour', 'day']);
+		$f->setField($field);
+		$f->setPage($this->page);
+		$f_name = 'sessionTimeOut';
+		$f->name = $f_name;
+		$f->label = $this->_('Session Timeout');
+		$f->description = $this->_('Set the session timeout period');
+		$f->notes = $this->_('Max recommended = 1 day');
+		$f->columnWidth = 50;
+
+		// Get the posted values
+
+		$postedMagnitude = $this->input->post["{$f_name}_magnitude"];
+		$postedUnit = $this->input->post["{$f_name}_unit"];
+		if($postedMagnitude && $postedUnit) {
+			// Create a new Measurement object
+			$measurement = $m->measurement("Time", $postedUnit, $postedMagnitude);
+			// Save the posted value
+			$f->value = $m->measurement_to_array($measurement);
+			$this->$f_name = $f->value;
+
+		} else {
+			// Set the value of the input field to the saved value
+			$f->value = $m->array_to_measurement($this->$f_name);
+		}
+
+		$inputfields->add($f);
+	}
+````
+
 ## API
 To use the API you need the **unformatted** field - i.e. either directly from 
 ````
